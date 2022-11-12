@@ -14,9 +14,10 @@ from common.dataio import get_database
 logger = logging.getLogger('galba.Quotes')
 
 class QuoteView(discord.ui.View):
-    def __init__(self, quote_url: str):
+    def __init__(self, quote_url: str, interaction: discord.Interaction):
         super().__init__(timeout=120)
         self.quote_url = quote_url
+        self.interaction = interaction
         
     @discord.ui.button(label="Sauvegarder", style=discord.ButtonStyle.success)
     async def save_quote(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -39,7 +40,7 @@ class QuoteView(discord.ui.View):
         await interaction.response.send_message(msg, ephemeral=True)
         
     async def on_timeout(self) -> None:
-        self.clear_items()
+        await self.interaction.edit_original_response(view=None)
 
 
 class MyQuotesView(discord.ui.View):
@@ -54,7 +55,7 @@ class MyQuotesView(discord.ui.View):
         self.inventory = inv[0]['quotes'] if inv else []
         self.inv_position = initial_position if 0 <= initial_position < len(self.inventory) else 0
         
-        if initial_position == 0:
+        if initial_position <= 0:
             self.previous.disabled = True
         elif initial_position >= len(self.inventory) - 1:
             self.next.disabled = True
@@ -72,8 +73,7 @@ class MyQuotesView(discord.ui.View):
         return is_author
     
     async def on_timeout(self) -> None:
-        self.clear_items()
-        await self.message.edit(view=self)
+        await self.message.edit(view=self.clear_items())
         
     def embed_quote(self, position: int):
         em = discord.Embed(color=0x2F3136)
@@ -170,7 +170,7 @@ class Quotes(commands.Cog):
         em = discord.Embed(color=0x2F3136)
         em.set_image(url=img)
         em.set_footer(text="Généré par Inspirobot.me")
-        await interaction.followup.send(embed=em, view=QuoteView(img))
+        await interaction.followup.send(embed=em, view=QuoteView(img, interaction))
         
     @app_commands.command(name='myquotes')
     async def myquotes(self, interaction: discord.Interaction, position: Optional[int] = 0):
