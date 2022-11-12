@@ -60,7 +60,15 @@ async def on_command_error(ctx: commands.Context, error) -> None:
             color=0xE02B2B
         )
         await ctx.send(embed=embed)
-
+        
+@bot.tree.error
+async def on_command_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.errors.CommandOnCooldown):
+        minutes, seconds = divmod(error.retry_after, 60)
+        hours, minutes = divmod(minutes, 60)
+        hours = hours % 24
+        msg = f"**Erreur ·** Tu pourras réutiliser la commande dans {f'{round(hours)} heures' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} secondes' if round(seconds) > 0 else ''}."
+        return await interaction.response.send_message(content=msg)
 
 async def load_cogs() -> None:
     """

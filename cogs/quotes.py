@@ -150,7 +150,6 @@ class Quotes(commands.Cog):
         if interaction.user.id == 172376505354158080:
             return None
         return app_commands.Cooldown(1, 600)
-    
         
     @app_commands.command(name='quote')
     @app_commands.checks.dynamic_cooldown(quote_cooldown)
