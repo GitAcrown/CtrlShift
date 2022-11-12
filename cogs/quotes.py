@@ -40,7 +40,6 @@ class QuoteView(discord.ui.View):
         
     async def on_timeout(self) -> None:
         self.clear_items()
-        await self.message.edit(view=self)
 
 
 class MyQuotesView(discord.ui.View):
@@ -53,7 +52,12 @@ class MyQuotesView(discord.ui.View):
         User = Query()
         inv = db.search(User.uid == self.user.id)
         self.inventory = inv[0]['quotes'] if inv else []
-        self.inv_position = initial_position
+        self.inv_position = initial_position if 0 <= initial_position < len(self.inventory) else 0
+        
+        if initial_position == 0:
+            self.previous.disabled = True
+        elif initial_position >= len(self.inventory) - 1:
+            self.next.disabled = True
         
         self.message : discord.InteractionMessage = None
         
@@ -85,14 +89,13 @@ class MyQuotesView(discord.ui.View):
             self.stop()
             return self.clear_items()
         self.message = await self.initial_interaction.original_response()
-        await self.buttons_logic(self.initial_interaction)
         
     async def buttons_logic(self, interaction: discord.Interaction):
         self.previous.disabled = self.inv_position == 0
         self.next.disabled = self.inv_position + 1 >= len(self.inventory)
         await interaction.message.edit(view=self)
         
-    @discord.ui.button(label="Précédent", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Précédent", style=discord.ButtonStyle.secondary)
     async def previous(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -101,14 +104,36 @@ class MyQuotesView(discord.ui.View):
         await self.buttons_logic(interaction)
         await interaction.response.edit_message(embed=self.embed_quote(self.inv_position))
 
-    @discord.ui.button(label="Suivant", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Suivant", style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Next button"""
         self.inv_position = min(len(self.inventory) - 1, self.inv_position + 1)
         await self.buttons_logic(interaction)
         await interaction.response.edit_message(embed=self.embed_quote(self.inv_position))
+        
+    @discord.ui.button(label="Retirer", style=discord.ButtonStyle.danger)
+    async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Delete button"""
+        db = get_database('quotes')
+        user = interaction.user
+        User = Query()
+        current_quotes = db.search(User.uid == user.id)
+        displayed = self.inventory[self.inv_position]
+        if current_quotes:
+            quotes = current_quotes[0]['quotes']
+            quotes.remove(displayed)
+            db.update({'quotes': quotes}, User.uid == user.id)
+        else:
+            db.insert({'uid': user.id, 'quotes': [self.quote_url]})
+        
+        await interaction.response.send_message(f"La citation **n°{self.inv_position + 1}** a été retirée avec succès de vos favoris.", ephemeral=True)
+        self.inv_position = self.inv_position - 1 if self.inv_position > 0 else 0
+        self.inventory = quotes
+        
+        await self.buttons_logic(interaction)
+        await self.message.edit(embed=self.embed_quote(self.inv_position))
     
-    @discord.ui.button(label="Fermer", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Fermer", style=discord.ButtonStyle.primary)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Close"""
         self.stop()
