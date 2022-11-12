@@ -1,4 +1,4 @@
-from tinydb import TinyDB, Query
+from tinydb import TinyDB
 from pathlib import Path
 
 DEFAULT_DATA_PATH = "database/"
