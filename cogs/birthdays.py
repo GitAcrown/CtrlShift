@@ -1,6 +1,8 @@
 import discord
 import logging
 import time
+from datetime import datetime
+import operator
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands, tasks
@@ -32,10 +34,16 @@ class Birthdays(commands.Cog):
         self.bot = bot
         self.task_bday.start()
         
+        self.context_menu = app_commands.ContextMenu(
+            name='Anniversaire',
+            callback=self.show_user_bday
+        )
+        self.bot.tree.add_command(self.context_menu)
+        
     async def cog_unload(self) -> None:
         self.task_bday.cancel()
             
-    @tasks.loop(minutes=1.0)
+    @tasks.loop(hours=1.0)
     async def task_bday(self):
         now_day, now_month = int(time.strftime('%d', time.localtime())), int(time.strftime('%m', time.localtime()))
         logger.info(f"Check Bday effectué - {now_day}/{now_month}")
@@ -79,14 +87,71 @@ class Birthdays(commands.Cog):
         
     @app_commands.command(name='removebday')
     async def removebday(self, interaction: discord.Interaction):
-        """Retirer votre anniversaire de la base de données du bot (global)
-        """
+        """Retirer votre anniversaire de la base de données du bot (global)"""
         db = get_database('birthdays')
         User = Query()
         db.remove(User.uid == interaction.user.id)
         await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
         
-    
+    @app_commands.command(name="nextbday")
+    async def nextbday(self, interaction: discord.Interaction):
+        """Consulter les prochains anniversaires sur ce serveur"""
+        guild = interaction.guild
+        await interaction.response.defer()
+        today = datetime.today()
+        members_id = [m.id for m in guild.members]
+        db = get_database('birthdays')
+        User = Query()
+        all_r = db.search(User.uid.test(lambda x: x in members_id))
+        if all_r:
+            annivs = []
+            for r in all_r:
+                user_bday = f"{r['day']}/{r['month']}"
+                user_date = datetime.strptime(user_bday, '%d/%m').replace(year=today.year)
+                if today < user_date:
+                    annivs.append([r['uid'], user_bday, user_date.timestamp(), user_date])
+                else:
+                    annivs.append([r['uid'], user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
+            sorted_r = sorted(annivs, key=operator.itemgetter(2))[:5]
+            if sorted_r:
+                msg = ''
+                for l in sorted_r:
+                    msg += f"- {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                
+                em = discord.Embed(title=f"Prochains anniversaires sur **{guild.name}**", description=msg, color=0x2F3136)
+                await interaction.followup.send(embed=em)
+            else:
+                await interaction.followup.send("**Aucun anniversaire n'est à venir ·** Aucun prochain anniversaire n'a été trouvé dans la base de données")
+        else:
+            await interaction.followup.send("**Aucun anniversaire n'est à venir ·** Aucun membre du serveur n'a configuré son anniversaire")
+        
+        
+    async def show_user_bday(self, interaction: discord.Interaction, member: discord.Member):
+        """Menu contextuel permettant l'affichage de l'anniversaire du membre visé
+
+        :param user: Utilisateur visé par la commande
+        """
+        today = datetime.today()
+        db = get_database('birthdays')
+        User = Query()
+        r = db.search(User.uid == member.id)
+        if r:
+            user_bday = f"{r[0]['day']}/{r[0]['month']}"
+            userdate = datetime.strptime(user_bday, '%d/%m')
+            userdate = userdate.replace(year=today.year)
+            msg = f"__Anniversaire :__ **{user_bday}**\n"
+
+            if today >= userdate:
+                next_date = userdate.replace(year=today.year + 1)
+            else:
+                next_date = userdate
+            msg += f"__Prochain :__ `{next_date.strftime('%d/%m/%Y')}`"
+        
+            em = discord.Embed(title=f"Anniversaire de **{member.display_name}**", description=msg, color=0x2F3136)
+            em.set_thumbnail(url=member.display_avatar.url)
+            await interaction.response.send_message(embed=em, ephemeral=True)
+        else:
+            await interaction.response.send_message("**Erreur ·** Ce membre n'a pas réglé son anniversaire sur ce bot.", ephemeral=True)
         
 async def setup(bot):
     await bot.add_cog(Birthdays(bot))

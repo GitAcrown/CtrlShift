@@ -41,9 +41,9 @@ async def main():
         
         @bot.event
         async def on_ready():
-            print(f"Logged in as {bot.user.name}")
-            print(f"discord.py API version: {discord.__version__}")
-            print("Invite : {}".format(discord.utils.oauth_url(int(bot.config["APP_ID"]), permissions=discord.Permissions(int(bot.config['PERMISSIONS_INT'])))))
+            print(f"> Logged in as {bot.user.name}")
+            print(f"> discord.py API version: {discord.__version__}")
+            print("> Invite : {}".format(discord.utils.oauth_url(int(bot.config["APP_ID"]), permissions=discord.Permissions(int(bot.config['PERMISSIONS_INT'])))))
             print("-------------------")
     
         @bot.tree.error
@@ -52,7 +52,7 @@ async def main():
                 minutes, seconds = divmod(error.retry_after, 60)
                 hours, minutes = divmod(minutes, 60)
                 hours = hours % 24
-                msg = f"**Erreur ·** Tu pourras réutiliser la commande dans {f'{round(hours)} heures' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} secondes' if round(seconds) > 0 else ''}."
+                msg = f"**Cooldown ·** Tu pourras réutiliser la commande dans {f'{round(hours)} heures' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} secondes' if round(seconds) > 0 else ''}."
                 return await interaction.response.send_message(content=msg)
             elif isinstance(error, app_commands.errors.MissingPermissions):
                 msg = f"**Erreur ·** Tu manques des permissions `" + ", ".join(error.missing_permissions) + "` pour cette commande !"
