@@ -12,6 +12,8 @@ from common.dataio import get_database
 
 logger = logging.getLogger('galba.Birthdays')
 
+bday_group = app_commands.Group(name="bday", description="Gestion des anniversaires")
+
 MONTHS_CHOICES = [
     Choice(name='Janvier', value=1),
     Choice(name='Février', value=2),
@@ -27,54 +29,52 @@ MONTHS_CHOICES = [
     Choice(name='Décembre', value=12)
 ]
 
-class Birthdays(commands.Cog):
+class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des anniversaires"):
     """Gestion et traçage des anniversaires"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.task_bday.start()
+    #   self.task_bday.start()
         
         self.context_menu = app_commands.ContextMenu(
             name='Anniversaire',
-            callback=self.show_user_bday
+            callback=self.ctx_usercommand_bday
         )
         self.bot.tree.add_command(self.context_menu)
         
-    async def cog_unload(self) -> None:
-        self.task_bday.cancel()
+        
+    # async def cog_unload(self) -> None:
+    #     self.task_bday.cancel()
             
-    @tasks.loop(hours=1.0)
-    async def task_bday(self):
-        now_day, now_month = int(time.strftime('%d', time.localtime())), int(time.strftime('%m', time.localtime()))
-        logger.info(f"Check Bday effectué - {now_day}/{now_month}")
+    # @tasks.loop(hours=1.0)
+    # async def task_bday(self):
+    #     now_day, now_month = int(time.strftime('%d', time.localtime())), int(time.strftime('%m', time.localtime()))
+    #     logger.info(f"Check Bday effectué - {now_day}/{now_month}")
+    #     # TODO: Ajouter l'attribution auto du rôle configuré
         
-    @task_bday.before_loop
-    async def before_task_bday(self):
-        await self.bot.wait_until_ready()
-        logger.info("Start task_bday")
+    # @task_bday.before_loop
+    # async def before_task_bday(self):
+    #     await self.bot.wait_until_ready()
+    #     logger.info("Start task_bday")
         
         
-    # GUILD LEVEL ----------------------------------
+    # # GUILD LEVEL ----------------------------------
         
-    @app_commands.command(name='bdayrole')
-    @app_commands.guild_only()
-    @app_commands.default_permissions(manage_messages=True)
-    async def bdayrole(self, interaction: discord.Interaction, role: discord.Role):
-        """Rôle à attribuer automatiquement le jour de l'anniversaire
-
-        :param role: Rôle à attribuer
-        """
-        db = get_database('birthdays', str(interaction.guild_id))
-        Setting = Query()
-        db.upsert({'name': 'role', 'value': role.id}, Setting.name == 'role')
-        await interaction.response.send_message(f"Le rôle a bien été configuré sur **{role}** !")
+    # @app_commands.command(name='bdayrole')
+    # @app_commands.guild_only()
+    # @app_commands.default_permissions(manage_messages=True)
+    # async def bdayrole(self, interaction: discord.Interaction, role: discord.Role):
+    #     db = get_database('birthdays', str(interaction.guild_id))
+    #     Setting = Query()
+    #     db.upsert({'name': 'role', 'value': role.id}, Setting.name == 'role')
+    #     await interaction.response.send_message(f"Le rôle a bien été configuré sur **{role}** !")
         
         
     # USER LEVEL -----------------------------------
         
-    @app_commands.command(name='bday')
+    @app_commands.command(name="set")
     @app_commands.choices(mois=MONTHS_CHOICES)
-    async def bday(self, interaction: discord.Interaction, jour: app_commands.Range[int, 1, 31], mois: app_commands.Range[int, 1, 12]):
+    async def bday_set(self, interaction: discord.Interaction, jour: app_commands.Range[int, 1, 31], mois: app_commands.Range[int, 1, 12]):
         """Informer le bot de votre date d'anniversaire (enregistré globalement)
 
         :param jour: Jour de naissance (1-31)
@@ -85,17 +85,17 @@ class Birthdays(commands.Cog):
         db.upsert({'uid': interaction.user.id, 'day': jour, 'month': mois}, User.uid == interaction.user.id)
         await interaction.response.send_message(f"**Votre anniversaire ({jour}/{mois}) a été enregistré !**\nPour le retirer, utilisez `/removebday`.")
         
-    @app_commands.command(name='removebday')
-    async def removebday(self, interaction: discord.Interaction):
+    @app_commands.command(name='remove')
+    async def bday_remove(self, interaction: discord.Interaction):
         """Retirer votre anniversaire de la base de données du bot (global)"""
         db = get_database('birthdays')
         User = Query()
         db.remove(User.uid == interaction.user.id)
         await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
         
-    @app_commands.command(name="nextbday")
-    async def nextbday(self, interaction: discord.Interaction):
-        """Consulter les prochains anniversaires sur ce serveur"""
+    @app_commands.command(name="list")
+    async def bday_list(self, interaction: discord.Interaction):
+        """Consulter les 5 prochains anniversaires sur ce serveur"""
         guild = interaction.guild
         await interaction.response.defer()
         today = datetime.today()
@@ -116,9 +116,10 @@ class Birthdays(commands.Cog):
             if sorted_r:
                 msg = ''
                 for l in sorted_r:
-                    msg += f"- {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                    msg += f"• {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
                 
                 em = discord.Embed(title=f"Prochains anniversaires sur **{guild.name}**", description=msg, color=0x2F3136)
+                em.set_footer(text=f"Anniversaires enregistrés · {len(annivs)}")
                 await interaction.followup.send(embed=em)
             else:
                 await interaction.followup.send("**Aucun anniversaire n'est à venir ·** Aucun prochain anniversaire n'a été trouvé dans la base de données")
@@ -126,7 +127,7 @@ class Birthdays(commands.Cog):
             await interaction.followup.send("**Aucun anniversaire n'est à venir ·** Aucun membre du serveur n'a configuré son anniversaire")
         
         
-    async def show_user_bday(self, interaction: discord.Interaction, member: discord.Member):
+    async def ctx_usercommand_bday(self, interaction: discord.Interaction, member: discord.Member):
         """Menu contextuel permettant l'affichage de l'anniversaire du membre visé
 
         :param user: Utilisateur visé par la commande
