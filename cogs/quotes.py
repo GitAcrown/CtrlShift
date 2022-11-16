@@ -15,7 +15,7 @@ logger = logging.getLogger('galba.Quotes')
 
 class QuoteView(discord.ui.View):
     def __init__(self, quote_url: str, interaction: discord.Interaction):
-        super().__init__(timeout=120)
+        super().__init__(timeout=600)
         self.quote_url = quote_url
         self.interaction = interaction
         

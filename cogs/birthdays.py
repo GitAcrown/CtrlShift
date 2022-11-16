@@ -83,7 +83,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         db = get_database('birthdays')
         User = Query()
         db.upsert({'uid': interaction.user.id, 'day': jour, 'month': mois}, User.uid == interaction.user.id)
-        await interaction.response.send_message(f"**Votre anniversaire ({jour}/{mois}) a été enregistré !**\nPour le retirer, utilisez `/removebday`.")
+        await interaction.response.send_message(f"**Votre anniversaire ({jour}/{mois}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
         
     @app_commands.command(name='remove')
     async def bday_remove(self, interaction: discord.Interaction):
