@@ -53,7 +53,7 @@ async def main():
                 hours, minutes = divmod(minutes, 60)
                 hours = hours % 24
                 msg = f"**Cooldown ·** Tu pourras réutiliser la commande dans {f'{round(hours)} heures' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} secondes' if round(seconds) > 0 else ''}."
-                return await interaction.response.send_message(content=msg)
+                return await interaction.response.send_message(content=msg, ephemeral=True)
             elif isinstance(error, app_commands.errors.MissingPermissions):
                 msg = f"**Erreur ·** Tu manques des permissions `" + ", ".join(error.missing_permissions) + "` pour cette commande !"
                 return await interaction.response.send_message(content=msg)
