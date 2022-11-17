@@ -1,8 +1,6 @@
 from typing import Optional
 
 import discord
-import platform
-import asyncio
 import logging
 import aiohttp
 from discord import app_commands
