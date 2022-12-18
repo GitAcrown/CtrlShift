@@ -8,7 +8,7 @@ from discord.app_commands import Choice
 from discord.ext import commands, tasks
 from tinydb import Query
 
-from common.dataio import get_database
+from common.dataio import get_tinydb_database, get_sqlite_database
 
 logger = logging.getLogger('galba.Birthdays')
 
@@ -41,36 +41,64 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
             callback=self.ctx_usercommand_bday
         )
         self.bot.tree.add_command(self.context_menu)
-        
-        
-    # async def cog_unload(self) -> None:
-    #     self.task_bday.cancel()
-            
-    # @tasks.loop(hours=1.0)
-    # async def task_bday(self):
-    #     now_day, now_month = int(time.strftime('%d', time.localtime())), int(time.strftime('%m', time.localtime()))
-    #     logger.info(f"Check Bday effectué - {now_day}/{now_month}")
-    #     # TODO: Ajouter l'attribution auto du rôle configuré
-        
-    # @task_bday.before_loop
-    # async def before_task_bday(self):
-    #     await self.bot.wait_until_ready()
-    #     logger.info("Start task_bday")
-        
-        
-    # # GUILD LEVEL ----------------------------------
-        
-    # @app_commands.command(name='bdayrole')
-    # @app_commands.guild_only()
-    # @app_commands.default_permissions(manage_messages=True)
-    # async def bdayrole(self, interaction: discord.Interaction, role: discord.Role):
-    #     db = get_database('birthdays', str(interaction.guild_id))
-    #     Setting = Query()
-    #     db.upsert({'name': 'role', 'value': role.id}, Setting.name == 'role')
-    #     await interaction.response.send_message(f"Le rôle a bien été configuré sur **{role}** !")
-        
+        self.initialize_database()
         
     # USER LEVEL -----------------------------------
+    
+    def initialize_database(self):
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, day INTEGER, month INTEGER)")
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+    def import_tinydb_to_sqlite(self):
+        db = get_tinydb_database('birthdays')
+        tdb = db.all()
+        
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+
+        for u in tdb:
+            cursor.execute("INSERT OR IGNORE INTO users (user_id, day, month) VALUES (?, ?, ?)", (u['uid'], u['day'], u['month']))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+    def add_birthday(self, user_id: int, day: int, month: int):
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (user_id, day, month) VALUES (?, ?, ?)", (user_id, day, month))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+    def remove_birthday(self, user_id: int):
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM users WHERE user_id=?", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+    def get_birthday(self, user_id: int):
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+        cursor.execute("SELECT day, month FROM users WHERE user_id=?", (user_id,))
+        birthday = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return birthday
+    
+    def get_all_birthdays(self):
+        conn = get_sqlite_database('birthdays')
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, day, month FROM users")
+        bdays = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return bdays
         
     @app_commands.command(name="set")
     @app_commands.choices(mois=MONTHS_CHOICES)
@@ -80,17 +108,13 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         :param jour: Jour de naissance (1-31)
         :param mois: Mois de naissance
         """
-        db = get_database('birthdays')
-        User = Query()
-        db.upsert({'uid': interaction.user.id, 'day': jour, 'month': mois}, User.uid == interaction.user.id)
+        self.add_birthday(interaction.user.id, jour, mois)
         await interaction.response.send_message(f"**Votre anniversaire ({jour}/{mois}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
         
     @app_commands.command(name='remove')
     async def bday_remove(self, interaction: discord.Interaction):
         """Retirer votre anniversaire de la base de données du bot (global)"""
-        db = get_database('birthdays')
-        User = Query()
-        db.remove(User.uid == interaction.user.id)
+        self.remove_birthday(interaction.user.id)
         await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
         
     @app_commands.command(name="list")
@@ -99,19 +123,17 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         guild = interaction.guild
         await interaction.response.defer()
         today = datetime.today()
-        members_id = [m.id for m in guild.members]
-        db = get_database('birthdays')
-        User = Query()
-        all_r = db.search(User.uid.test(lambda x: x in members_id))
-        if all_r:
+        
+        bdays = self.get_all_birthdays()
+        if bdays:
             annivs = []
-            for r in all_r:
-                user_bday = f"{r['day']}/{r['month']}"
+            for bday in bdays:
+                user_bday = f"{bday[1]}/{bday[2]}"
                 user_date = datetime.strptime(user_bday, '%d/%m').replace(year=today.year)
                 if today < user_date:
-                    annivs.append([r['uid'], user_bday, user_date.timestamp(), user_date])
+                    annivs.append([bday[0], user_bday, user_date.timestamp(), user_date])
                 else:
-                    annivs.append([r['uid'], user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
+                    annivs.append([bday[0], user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
             sorted_r = sorted(annivs, key=operator.itemgetter(2))[:5]
             if sorted_r:
                 msg = ''
@@ -133,11 +155,9 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         :param user: Utilisateur visé par la commande
         """
         today = datetime.today()
-        db = get_database('birthdays')
-        User = Query()
-        r = db.search(User.uid == member.id)
-        if r:
-            user_bday = f"{r[0]['day']}/{r[0]['month']}"
+        bday = self.get_birthday(interaction.user.id)
+        if bday:
+            user_bday = f"{bday[0]}/{bday[1]}"
             userdate = datetime.strptime(user_bday, '%d/%m')
             userdate = userdate.replace(year=today.year)
             msg = f"__Anniversaire :__ **{user_bday}**\n"
