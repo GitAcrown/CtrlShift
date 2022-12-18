@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands, tasks
 from tinydb import Query
+from typing import Optional
 
 from common.dataio import get_sqlite_database
 
@@ -118,7 +119,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
         
     @app_commands.command(name="list")
-    async def bday_list(self, interaction: discord.Interaction, affichage: int = 5):
+    async def bday_list(self, interaction: discord.Interaction, affichage: Optional[int] = 5):
         """Consulter les X prochains anniversaires sur ce serveur
         
         :param affichage: Nombre d'anniversaire à afficher, par défaut 5, max. 10"""
