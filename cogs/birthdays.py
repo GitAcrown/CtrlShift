@@ -125,6 +125,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         today = datetime.today()
         
         bdays = self.get_all_birthdays()
+        print(bdays)
         if bdays:
             annivs = []
             for bday in bdays:
@@ -138,7 +139,10 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
             if sorted_r:
                 msg = ''
                 for l in sorted_r:
-                    msg += f"• {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                    try:
+                        msg += f"• {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                    except:
+                        pass
                 
                 em = discord.Embed(title=f"Prochains anniversaires sur **{guild.name}**", description=msg, color=0x2F3136)
                 em.set_footer(text=f"Anniversaires enregistrés · {len(annivs)}")
