@@ -112,7 +112,7 @@ async def main():
         @bot.command(name='eval')
         @commands.is_owner()
         @commands.command(hidden=True)
-        async def _eval(self, ctx: commands.Context, *, body: str):
+        async def eval_code(self, ctx: commands.Context, *, body: str):
             """Evalue du code"""
 
             env = {
