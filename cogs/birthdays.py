@@ -8,7 +8,7 @@ from discord.app_commands import Choice
 from discord.ext import commands, tasks
 from tinydb import Query
 
-from common.dataio import get_tinydb_database, get_sqlite_database
+from common.dataio import get_sqlite_database
 
 logger = logging.getLogger('galba.Birthdays')
 
@@ -53,18 +53,18 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         cursor.close()
         conn.close()
         
-    def import_tinydb_to_sqlite(self):
-        db = get_tinydb_database('birthdays')
-        tdb = db.all()
+    # def import_tinydb_to_sqlite(self):
+    #     db = get_tinydb_database('birthdays')
+    #     tdb = db.all()
         
-        conn = get_sqlite_database('birthdays')
-        cursor = conn.cursor()
+    #     conn = get_sqlite_database('birthdays')
+    #     cursor = conn.cursor()
 
-        for u in tdb:
-            cursor.execute("INSERT OR IGNORE INTO users (user_id, day, month) VALUES (?, ?, ?)", (u['uid'], u['day'], u['month']))
-        conn.commit()
-        cursor.close()
-        conn.close()
+    #     for u in tdb:
+    #         cursor.execute("INSERT OR IGNORE INTO users (user_id, day, month) VALUES (?, ?, ?)", (u['uid'], u['day'], u['month']))
+    #     conn.commit()
+    #     cursor.close()
+    #     conn.close()
         
     def add_birthday(self, user_id: int, day: int, month: int):
         conn = get_sqlite_database('birthdays')
