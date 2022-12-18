@@ -1,4 +1,8 @@
 from discord.ext import commands, tasks
+import textwrap
+import io
+import traceback
+from contextlib import redirect_stdout
 
 
 class CogManager(commands.Cog):
@@ -57,6 +61,55 @@ class CogManager(commands.Cog):
     async def cogs(self, ctx):
         for cog_name, _cog in self.bot.cogs.items():
             await ctx.send(cog_name)
+            
+    @commands.command(name='eval')
+    @commands.is_owner()
+    async def eval_code(self, ctx: commands.Context, *, body: str):
+        """Evalue du code"""
+
+        env = {
+            'bot': self.bot,
+            'ctx': ctx,
+            'channel': ctx.channel,
+            'author': ctx.author,
+            'guild': ctx.guild,
+            'message': ctx.message,
+            '_': self._last_result,
+        }
+
+        env.update(globals())
+
+        body = self.cleanup_code(body)
+        stdout = io.StringIO()
+
+        to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
+
+        try:
+            exec(to_compile, env)
+        except Exception as e:
+            return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
+
+        func = env['func']
+        try:
+            with redirect_stdout(stdout):
+                ret = await func()
+        except Exception as e:
+            value = stdout.getvalue()
+            await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
+        else:
+            value = stdout.getvalue()
+            try:
+                await ctx.message.add_reaction('\u2705')
+            except:
+                pass
+
+            if ret is None:
+                if value:
+                    await ctx.send(f'```py\n{value}\n```')
+            else:
+                self._last_result = ret
+                await ctx.send(f'```py\n{value}{ret}\n```')
+
 
 
 async def setup(bot):
