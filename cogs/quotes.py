@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 from tinydb import Query
 
-from common.dataio import get_database
+from common.dataio import get_tinydb_database
 
 logger = logging.getLogger('galba.Quotes')
 
@@ -20,7 +20,7 @@ class QuoteView(discord.ui.View):
     @discord.ui.button(label="Sauvegarder", style=discord.ButtonStyle.success)
     async def save_quote(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Sauvegarder la citation"""
-        db = get_database('quotes')
+        db = get_tinydb_database('quotes')
         user = interaction.user
         User = Query()
         current_quotes = db.search(User.uid == user.id)
@@ -47,7 +47,7 @@ class MyQuotesView(discord.ui.View):
         self.initial_interaction = interaction
         self.user = interaction.user
         
-        db = get_database('quotes')
+        db = get_tinydb_database('quotes')
         User = Query()
         inv = db.search(User.uid == self.user.id)
         self.inventory = inv[0]['quotes'] if inv else []
@@ -112,7 +112,7 @@ class MyQuotesView(discord.ui.View):
     @discord.ui.button(label="Retirer", style=discord.ButtonStyle.danger)
     async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Delete button"""
-        db = get_database('quotes')
+        db = get_tinydb_database('quotes')
         user = interaction.user
         User = Query()
         current_quotes = db.search(User.uid == user.id)
