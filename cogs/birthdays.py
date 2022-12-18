@@ -69,7 +69,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
     def add_birthday(self, user_id: int, day: int, month: int):
         conn = get_sqlite_database('birthdays')
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (user_id, day, month) VALUES (?, ?, ?)", (user_id, day, month))
+        cursor.execute("INSERT OR REPLACE INTO users (user_id, day, month) VALUES (?, ?, ?)", (user_id, day, month))
         conn.commit()
         cursor.close()
         conn.close()
