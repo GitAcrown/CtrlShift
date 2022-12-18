@@ -142,7 +142,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
                     try:
                         msg += f"• {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
                     except:
-                        pass
+                        logger.info(f"Impossible d'accéder à USER_ID:{l[0]}", exc_info=True)
                 
                 em = discord.Embed(title=f"Prochains anniversaires sur **{guild.name}**", description=msg, color=0x2F3136)
                 em.set_footer(text=f"Anniversaires enregistrés · {len(annivs)}")
