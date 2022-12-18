@@ -3,13 +3,14 @@ import textwrap
 import io
 import traceback
 from contextlib import redirect_stdout
-
+from typing import Optional, Any
 
 class CogManager(commands.Cog):
     """Manage cogs"""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self._last_result: Optional[Any] = None
 
     @commands.command(name="load", hidden=True)
     @commands.is_owner()
@@ -62,7 +63,7 @@ class CogManager(commands.Cog):
         for cog_name, _cog in self.bot.cogs.items():
             await ctx.send(cog_name)
             
-    @commands.command(name='eval')
+    @commands.command(name='eval', hidden=True)
     @commands.is_owner()
     async def eval_code(self, ctx: commands.Context, *, body: str):
         """Evalue du code"""
