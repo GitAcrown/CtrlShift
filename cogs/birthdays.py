@@ -144,12 +144,12 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
                 msg = ''
                 for l in sorted_r:
                     try:
-                        msg += f"• {l[0]} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                        msg += f"• {l[0].mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
                     except:
                         logger.info(f"Impossible d'accéder à USER_ID:{l[0]}", exc_info=True)
                 
                 em = discord.Embed(title=f"Prochains anniversaires sur **{guild.name}**", description=msg, color=0x2F3136)
-                em.set_footer(text=f"Anniversaires enregistrés · {len(annivs)}")
+                em.set_footer(text=f"Anniversaires enregistrés sur ce serveur · {len(annivs)}")
                 await interaction.followup.send(embed=em)
             else:
                 await interaction.followup.send("**Aucun anniversaire n'est à venir ·** Aucun prochain anniversaire n'a été trouvé dans la base de données")
