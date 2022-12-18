@@ -24,7 +24,7 @@ intents.members = True
 async def main():
     bot = commands.Bot(
        command_prefix=commands.when_mentioned,
-        description="General purpose bot (FR)",
+        description="Bot multifonction modulaire français, basé sur NERON",
         help_command=None,
         intents=intents 
     )
@@ -111,7 +111,7 @@ async def main():
             
         @bot.command(name='eval')
         @commands.is_owner()
-        async def eval_code(self, ctx: commands.Context, *, body: str):
+        async def eval_code(ctx: commands.Context, *, body: str):
             """Evalue du code"""
 
             env = {
