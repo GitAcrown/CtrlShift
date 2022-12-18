@@ -118,29 +118,33 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
         
     @app_commands.command(name="list")
-    async def bday_list(self, interaction: discord.Interaction):
-        """Consulter les 5 prochains anniversaires sur ce serveur"""
+    async def bday_list(self, interaction: discord.Interaction, affichage: int = 5):
+        """Consulter les X prochains anniversaires sur ce serveur
+        
+        :param affichage: Nombre d'anniversaire à afficher, par défaut 5, max. 10"""
         guild = interaction.guild
         await interaction.response.defer()
         today = datetime.today()
+        affichage = min(affichage, 10)
         
         bdays = self.get_all_birthdays()
-        print(bdays)
+        all_members = [m.id for m in guild.members]
         if bdays:
             annivs = []
             for bday in bdays:
-                user_bday = f"{bday[1]}/{bday[2]}"
-                user_date = datetime.strptime(user_bday, '%d/%m').replace(year=today.year)
-                if today < user_date:
-                    annivs.append([bday[0], user_bday, user_date.timestamp(), user_date])
-                else:
-                    annivs.append([bday[0], user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
-            sorted_r = sorted(annivs, key=operator.itemgetter(2))[:5]
+                if bday[0] in all_members:
+                    user_bday = f"{bday[1]}/{bday[2]}"
+                    user_date = datetime.strptime(user_bday, '%d/%m').replace(year=today.year)
+                    if today < user_date:
+                        annivs.append([guild.get_member(bday[0]), user_bday, user_date.timestamp(), user_date])
+                    else:
+                        annivs.append([guild.get_member(bday[0]), user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
+            sorted_r = sorted(annivs, key=operator.itemgetter(2))[:affichage]
             if sorted_r:
                 msg = ''
                 for l in sorted_r:
                     try:
-                        msg += f"• {guild.get_member(l[0]).mention} : `{l[3].strftime('%d/%m/%Y')}`\n"
+                        msg += f"• {l[0]} : `{l[3].strftime('%d/%m/%Y')}`\n"
                     except:
                         logger.info(f"Impossible d'accéder à USER_ID:{l[0]}", exc_info=True)
                 
