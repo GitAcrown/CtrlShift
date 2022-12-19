@@ -9,7 +9,7 @@ from typing import Optional, Literal, Union
 
 from common.dataio import get_tinydb_database
 
-logger = logging.getLogger('galba.Snowfest')
+logger = logging.getLogger('nero.Snowfest')
 
 # TODO
 # - Stats & items améliorant les stats (précision, chance, force)

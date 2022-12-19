@@ -11,7 +11,7 @@ from typing import Optional
 
 from common.dataio import get_sqlite_database
 
-logger = logging.getLogger('galba.Birthdays')
+logger = logging.getLogger('nero.Birthdays')
 
 bday_group = app_commands.Group(name="bday", description="Gestion des anniversaires")
 
@@ -35,7 +35,6 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-    #   self.task_bday.start()
         
         self.context_menu = app_commands.ContextMenu(
             name='Anniversaire',
@@ -102,31 +101,34 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         return bdays
         
     @app_commands.command(name="set")
-    @app_commands.choices(mois=MONTHS_CHOICES)
-    async def bday_set(self, interaction: discord.Interaction, jour: app_commands.Range[int, 1, 31], mois: app_commands.Range[int, 1, 12]):
+    @app_commands.choices(month=MONTHS_CHOICES)
+    async def bday_set(self, interaction: discord.Interaction, day: app_commands.Range[int, 1, 31], month: app_commands.Range[int, 1, 12]):
         """Informer le bot de votre date d'anniversaire (enregistré globalement)
 
-        :param jour: Jour de naissance (1-31)
-        :param mois: Mois de naissance
+        :param day: Jour de naissance (1-31)
+        :param month: Mois de naissance
         """
-        self.add_birthday(interaction.user.id, jour, mois)
-        await interaction.response.send_message(f"**Votre anniversaire ({jour}/{mois}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
+        self.add_birthday(interaction.user.id, day, month)
+        await interaction.response.send_message(f"**Votre anniversaire ({day}/{month}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
         
     @app_commands.command(name='remove')
     async def bday_remove(self, interaction: discord.Interaction):
         """Retirer votre anniversaire de la base de données du bot (global)"""
-        self.remove_birthday(interaction.user.id)
-        await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
-        
+        if self.get_birthday(interaction.user.id):
+            self.remove_birthday(interaction.user.id)
+            await interaction.response.send_message(f"Votre anniversaire a été supprimé de la base de données avec succès.")
+        else:
+            await interaction.response.send_message("**Erreur ·** Vous n'avez pas réglé votre anniversaire sur ce bot.", ephemeral=True)
+            
     @app_commands.command(name="list")
-    async def bday_list(self, interaction: discord.Interaction, affichage: Optional[int] = 5):
+    async def bday_list(self, interaction: discord.Interaction, display: Optional[int] = 5):
         """Consulter les X prochains anniversaires sur ce serveur
         
         :param affichage: Nombre d'anniversaire à afficher, par défaut 5, max. 10"""
         guild = interaction.guild
         await interaction.response.defer()
         today = datetime.today()
-        affichage = min(affichage, 10)
+        display = min(display, 10)
         
         bdays = self.get_all_birthdays()
         all_members = [m.id for m in guild.members]
@@ -140,7 +142,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
                         annivs.append([guild.get_member(bday[0]), user_bday, user_date.timestamp(), user_date])
                     else:
                         annivs.append([guild.get_member(bday[0]), user_bday, user_date.replace(year=today.year + 1).timestamp(), user_date.replace(year=today.year + 1)])
-            sorted_r = sorted(annivs, key=operator.itemgetter(2))[:affichage]
+            sorted_r = sorted(annivs, key=operator.itemgetter(2))[:display]
             if sorted_r:
                 msg = ''
                 for l in sorted_r:
@@ -161,7 +163,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
     async def ctx_usercommand_bday(self, interaction: discord.Interaction, member: discord.Member):
         """Menu contextuel permettant l'affichage de l'anniversaire du membre visé
 
-        :param user: Utilisateur visé par la commande
+        :param member: Utilisateur visé par la commande
         """
         today = datetime.today()
         bday = self.get_birthday(interaction.user.id)

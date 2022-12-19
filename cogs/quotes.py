@@ -9,7 +9,7 @@ from tinydb import Query
 
 from common.dataio import get_tinydb_database
 
-logger = logging.getLogger('galba.Quotes')
+logger = logging.getLogger('nero.Quotes')
 
 class QuoteView(discord.ui.View):
     def __init__(self, quote_url: str, interaction: discord.Interaction):
