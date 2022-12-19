@@ -13,9 +13,9 @@ logger = logging.getLogger('nero.Polls')
 class NewPoll(discord.ui.Modal, title="Créer un sondage"):
     sesstitle = discord.ui.TextInput(label="Titre", placeholder="Nom de cette session de vote", 
                                  style=discord.TextStyle.short, max_length=100)
-    choices = discord.ui.TextInput(label="Choix", placeholder="Indiquez un choix par ligne", 
+    choices = discord.ui.TextInput(label="Choix", placeholder="Indiquez un choix par ligne, ou séparez les réponses avec ';'", 
                                 style=discord.TextStyle.paragraph, max_length=200)
-    poll_timeout = discord.ui.TextInput(label="Expiration", placeholder="Temps en min. avant expiration auto. (par défaut aucune)", 
+    poll_timeout = discord.ui.TextInput(label="Expiration auto. (WIP)", placeholder="Temps en min. avant expiration auto. (par défaut aucune)", 
                                 style=discord.TextStyle.short, max_length=3, default='0', required=False)
     
     def __init__(self, cog: "Polls") -> None:
@@ -292,7 +292,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         view.add_item(VoteSelectMenu(interaction, self, session, sessions[session]['choices']))
         await interaction.response.send_message(content=f"**Sondage :** *{sessions[session]['title']}*", view=view, ephemeral=True)
         await view.wait()
-        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
+        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}***\nParticipez-y aussi avec `/poll vote` !")
         
     @vote.autocomplete('session')
     async def vote_autocomplete_callback(self, interaction: discord.Interaction, current: str):
