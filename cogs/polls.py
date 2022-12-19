@@ -197,10 +197,11 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         if session not in sessions:
             return await interaction.response.send_message("**Erreur ·** Cet identifiant de session de vote est invalide", ephemeral=True)
         
-        if sessions[session]['author_id'] != interaction.user.id or not interaction.user.guild_permissions.ban_members:
+        if sessions[session]['author_id'] == interaction.user.id or interaction.channel.permissions_for(interaction.user).ban_members:
+            await interaction.response.defer(thinking=True)
+        else:
             return await interaction.response.send_message("**Erreur ·** Vous n'avez pas l'autorisation de terminer ce sondage\nVous devez être le créateur du sondage ou un modérateur possédant la permission `ban_members`", ephemeral=True)
         
-        await interaction.response.defer(thinking=True)
         votes = self.get_all_votes_from_session(interaction.guild, session)
         
         em = discord.Embed(title=f"***{sessions[session]['title']}***", description='\n'.join([f'• `{i}`' for i in sessions[session]['choices']]), color=discord.Color.red())
