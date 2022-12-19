@@ -51,7 +51,6 @@ class VoteSelectMenu(discord.ui.Select):
         value = self.values[0]
         self.cog.set_member_vote(interaction.user, self.session_id, value)
         await self.original_interaction.edit_original_response(content=f"**Merci d'avoir voté !**\nVotre réponse (*{value}*) a bien été prise en compte !", view=None)
-        await self.original_interaction.response.send_message(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
 
 class Confirmbutton(discord.ui.View):
     def __init__(self, initial_interaction: discord.Interaction):
@@ -292,6 +291,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         view = discord.ui.View()
         view.add_item(VoteSelectMenu(interaction, self, session, sessions[session]['choices']))
         await interaction.response.send_message(content=f"**Sondage :** *{sessions[session]['title']}*", view=view, ephemeral=True)
+        await interaction.response.send_message(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
         
     @vote.autocomplete('session')
     async def vote_autocomplete_callback(self, interaction: discord.Interaction, current: str):
