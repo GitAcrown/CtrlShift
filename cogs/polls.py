@@ -51,6 +51,7 @@ class VoteSelectMenu(discord.ui.Select):
         value = self.values[0]
         self.cog.set_member_vote(interaction.user, self.session_id, value)
         await self.original_interaction.edit_original_response(content=f"**Merci d'avoir voté !**\nVotre réponse (*{value}*) a bien été prise en compte !", view=None)
+        await self.original_interaction.response.send_message(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
 
 class Confirmbutton(discord.ui.View):
     def __init__(self, initial_interaction: discord.Interaction):
