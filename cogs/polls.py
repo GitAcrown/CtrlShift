@@ -291,7 +291,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         view = discord.ui.View()
         view.add_item(VoteSelectMenu(interaction, self, session, sessions[session]['choices']))
         await interaction.response.send_message(content=f"**Sondage :** *{sessions[session]['title']}*", view=view, ephemeral=True)
-        await interaction.response.send_message(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
+        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}*** !")
         
     @vote.autocomplete('session')
     async def vote_autocomplete_callback(self, interaction: discord.Interaction, current: str):
