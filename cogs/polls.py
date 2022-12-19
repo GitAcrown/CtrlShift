@@ -25,6 +25,7 @@ class NewPoll(discord.ui.Modal, title="Créer un sondage"):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.cog.create_poll_session(interaction.user, str(self.sesstitle), self.choices.value, int(self.poll_timeout.value))
         await interaction.response.send_message(f"Nouvelle session de vote **{self.sesstitle}** créée avec succès.", ephemeral=True)
+        await interaction.channel.send(f"Une session de vote **{self.sesstitle}** a été créée par {interaction.user} !", delete_after=60)
         
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message(f"Oups ! Il y a eu une erreur lors de la création de la session.", ephemeral=True)
@@ -292,7 +293,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         view.add_item(VoteSelectMenu(interaction, self, session, sessions[session]['choices']))
         await interaction.response.send_message(content=f"**Sondage :** *{sessions[session]['title']}*", view=view, ephemeral=True)
         await view.wait()
-        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}***\nParticipez-y aussi avec `/poll vote` !")
+        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{sessions[session]['title']}***\nParticipez-y aussi avec `/poll vote` !", delete_after=30)
         
     @vote.autocomplete('session')
     async def vote_autocomplete_callback(self, interaction: discord.Interaction, current: str):
