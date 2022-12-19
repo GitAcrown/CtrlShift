@@ -2,6 +2,7 @@ import discord
 import logging
 import time
 import re
+from tabulate import tabulate
 from discord import app_commands
 from discord.ext import commands
 from typing import Optional, Any
@@ -25,7 +26,7 @@ class NewPoll(discord.ui.Modal, title="Créer un sondage"):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.cog.create_poll_session(interaction.user, str(self.sesstitle), self.choices.value, int(self.poll_timeout.value))
         await interaction.response.send_message(f"Nouvelle session de vote **{self.sesstitle}** créée avec succès.", ephemeral=True)
-        await interaction.channel.send(f"Une session de vote **{self.sesstitle}** [{' '.join([f'`{i}`' for i in self.cog.parse_choices(self.choices.value)])}] a été créée par {interaction.user} !\nParticipez-y avec `/poll vote`", delete_after=60)
+        await interaction.channel.send(f"Une session de vote **{self.sesstitle}** [{' '.join([f'`{i}`' for i in self.cog.parse_choices(self.choices.value)])}] a été créée par {interaction.user} !\nParticipez-y avec `/poll vote`")
         
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         await interaction.response.send_message(f"Oups ! Il y a eu une erreur lors de la création de la session.", ephemeral=True)
@@ -53,7 +54,7 @@ class VoteSelectMenu(discord.ui.Select):
         self.cog.set_member_vote(interaction.user, self.session_id, value)
         await self.original_interaction.edit_original_response(content=f"**Merci d'avoir voté !**\nVotre réponse (*{value}*) a bien été prise en compte !", view=None)
         session = self.cog.polls_cache[interaction.guild.id][self.session_id]
-        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{session['title']}***\nParticipez-y aussi avec `/poll vote` !", delete_after=30.0)
+        await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{session['title']}***\nParticipez-y aussi avec `/poll vote` !", delete_after=20.0)
 
 class Confirmbutton(discord.ui.View):
     def __init__(self, initial_interaction: discord.Interaction):
@@ -160,8 +161,8 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         chunks = []
         for c in self.parse_choices(poll['choices']):
             nb = len([m for m in votes if m[1] == c])
-            chunks.append(f"**`{c}` ·** {pretty.bar_chart(nb, len(votes), 2)} {nb}")
-        em = discord.Embed(title=f"***{poll['title']}***", description='\n'.join(chunks), color=0x2F3136)
+            chunks.append((c, f'{pretty.bar_chart(nb, len(votes), 2)} ({nb})'))
+        em = discord.Embed(title=f"***{poll['title']}***", description=tabulate(chunks, headers=('Choix', 'Votes')), color=0x2F3136)
         em.set_footer(text=f"Total votants : {len(votes)}")
         return em
         
