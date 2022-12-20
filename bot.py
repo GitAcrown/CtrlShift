@@ -64,10 +64,10 @@ async def main():
             """Ping"""
             await ctx.send(f"Pong ! (`{round(bot.latency * 1000)}ms`)")
         
-        @bot.command(name='appsync')
+        @bot.command(name='sync')
         @commands.guild_only()
         @commands.is_owner()
-        async def appsync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
+        async def sync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
             """Synchronisation des commandes localement ou globalement
             
             sync -> global sync
