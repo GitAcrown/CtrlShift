@@ -105,7 +105,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
                         embed = self.embed_poll_results(guild, s)
                         channel = self.bot.get_channel(sess[s]['channel_id'])
                         self.delete_poll_session(guild, s)
-                        await channel.send('**Sondage expiré**', embed=embed)
+                        await channel.send(f"**Sondage `{sess[s]['title']}` expiré**", embed=embed)
         
         
     @commands.Cog.listener()
@@ -142,8 +142,9 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         guild = author.guild
         start_time = time.time()
         sessionid = hex(int(start_time))[2:]
+        if self.parse_choices(choices):
+            raise ValueError("Le paramètre Choices ne peut pas être qu'un seul choix")
         choices = '|'.join(self.parse_choices(choices))
-        
         conn = get_sqlite_database('polls', 'g' + str(guild.id))
         cursor = conn.cursor()
         cursor.execute("INSERT OR REPLACE INTO polls (session_id, title, choices, start_time, timeout, author_id, channel_id) VALUES (?, ?, ?, ?, ?, ?, ?)", 
@@ -239,7 +240,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         embed = self.embed_poll_results(interaction.guild, session)
         
         self.delete_poll_session(interaction.guild, session)
-        await interaction.edit_original_response(content="**Sondage terminé**", embed=embed, view=None)
+        await interaction.edit_original_response(content=f"**Sondage `{sessions[session]['title']}` terminé**", embed=embed, view=None)
         
     @stop_session.autocomplete('session')
     async def stop_autocomplete_callback(self, interaction: discord.Interaction, current: str):
