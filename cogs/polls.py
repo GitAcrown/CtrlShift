@@ -129,9 +129,9 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
     # POLLS ----------------------------------------------
         
     def parse_choices(self, choices: str) -> list:
-        clist = re.split(r'[;|\n]', choices)
-        clist = [c.strip() for c in clist if c]
-        return clist
+        choices = re.split(r'[;|\n]', choices)
+        choices = [c.strip() for c in choices if c]
+        return choices
         
     def create_poll_session(self, author: discord.Member, channel: discord.TextChannel, title: str, choices: str, timeout: int = 0):
         guild = author.guild
@@ -179,7 +179,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         for c in self.parse_choices(poll['choices']):
             nb = len([m for m in votes if m[1] == c])
             chunks.append((c, f'{pretty.bar_chart(nb, len(votes), 5 if len(votes) < 10 else 10)} ({nb})'))
-        em = discord.Embed(title=f"***{poll['title']}***", description=f"```{tabulate(chunks)}```", color=0x2F3136)
+        em = discord.Embed(title=f"***{poll['title']}***", description=f"```{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136)
         em.set_footer(text=f"Total votants : {len(votes)}")
         return em
         
