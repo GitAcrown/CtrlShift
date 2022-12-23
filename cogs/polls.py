@@ -134,15 +134,15 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
     # POLLS ----------------------------------------------
         
     def parse_choices(self, choices: str) -> list:
-        choices = re.split(r'[;|\n]', choices)
-        choices = [c.strip() for c in choices if c]
-        return choices
+        clist = re.split(r'[;|\n]', choices)
+        clist = [c.strip() for c in clist if c]
+        return clist
         
     def create_poll_session(self, author: discord.Member, channel: discord.TextChannel, title: str, choices: str, timeout: int = 0):
         guild = author.guild
         start_time = time.time()
         sessionid = hex(int(start_time))[2:]
-        if self.parse_choices(choices):
+        if len(self.parse_choices(choices)) < 2:
             raise ValueError("Le paramètre Choices ne peut pas être qu'un seul choix")
         choices = '|'.join(self.parse_choices(choices))
         conn = get_sqlite_database('polls', 'g' + str(guild.id))
