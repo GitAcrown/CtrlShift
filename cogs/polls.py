@@ -100,11 +100,12 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         for guild in self.bot.guilds:
             sess = copy(self.get_poll_sessions(guild))
             for s in sess:
-                if sess[s]['start_time'] + sess[s]['timeout'] <= time.time():
-                    embed = self.embed_poll_results(guild, s)
-                    channel = self.bot.get_channel(sess[s]['channel_id'])
-                    self.delete_poll_session(guild, s)
-                    await channel.send('**Sondage expiré**', embed=embed)
+                if sess[s]['timeout'] != 0:
+                    if sess[s]['start_time'] + sess[s]['timeout'] <= time.time():
+                        embed = self.embed_poll_results(guild, s)
+                        channel = self.bot.get_channel(sess[s]['channel_id'])
+                        self.delete_poll_session(guild, s)
+                        await channel.send('**Sondage expiré**', embed=embed)
         
         
     @commands.Cog.listener()
