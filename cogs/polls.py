@@ -176,7 +176,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         votes = self.get_all_votes_from_session(guild, session_id)
         
         chunks = []
-        for c in self.parse_choices(poll['choices']):
+        for c in poll['choices']:
             nb = len([m for m in votes if m[1] == c])
             chunks.append((c, f'{pretty.bar_chart(nb, len(votes), 5 if len(votes) < 10 else 10)} ({nb})'))
         em = discord.Embed(title=f"***{poll['title']}***", description=f"```{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136)
