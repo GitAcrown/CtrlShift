@@ -4,10 +4,11 @@ import time
 import re
 from tabulate import tabulate
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from typing import Optional, Any
 from common.dataio import get_sqlite_database
 from common.utils import fuzzy, pretty
+from copy import copy
 
 logger = logging.getLogger('nero.Polls')
 
@@ -16,7 +17,7 @@ class NewPoll(discord.ui.Modal, title="Créer un sondage"):
                                  style=discord.TextStyle.short, max_length=100)
     choices = discord.ui.TextInput(label="Choix", placeholder="Indiquez un choix par ligne, ou séparez les réponses avec ';'", 
                                 style=discord.TextStyle.paragraph, max_length=200)
-    poll_timeout = discord.ui.TextInput(label="Expiration auto. (WIP)", placeholder="Temps en min. avant expiration auto. (par défaut aucune)", 
+    poll_timeout = discord.ui.TextInput(label="Expiration auto. (min)", placeholder="Temps en min. avant expiration auto. (par défaut aucune)", 
                                 style=discord.TextStyle.short, max_length=3, default='0', required=False)
     
     def __init__(self, cog: "Polls") -> None:
@@ -24,12 +25,15 @@ class NewPoll(discord.ui.Modal, title="Créer un sondage"):
         self.cog : Polls = cog
     
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        self.cog.create_poll_session(interaction.user, str(self.sesstitle), self.choices.value, int(self.poll_timeout.value))
+        self.cog.create_poll_session(interaction.user, interaction.channel, str(self.sesstitle), self.choices.value, int(self.poll_timeout.value) * 60)
         await interaction.response.send_message(f"Nouvelle session de vote **{self.sesstitle}** créée avec succès.", ephemeral=True)
-        await interaction.channel.send(f"Une session de vote **{self.sesstitle}** [{' '.join([f'`{i}`' for i in self.cog.parse_choices(self.choices.value)])}] a été créée par {interaction.user} !\nParticipez-y avec `/poll vote`")
+        if self.poll_timeout.value != '0':
+            await interaction.channel.send(f"Une session de vote **{self.sesstitle}** [{' '.join([f'`{i}`' for i in self.cog.parse_choices(self.choices.value)])}] expirant dans **{self.poll_timeout.value}m** a été créée par {interaction.user} !\nParticipez-y avec `/poll vote`")
+        else:
+            await interaction.channel.send(f"Une session de vote **{self.sesstitle}** [{' '.join([f'`{i}`' for i in self.cog.parse_choices(self.choices.value)])}] a été créée par {interaction.user} !\nParticipez-y avec `/poll vote`")
         
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        await interaction.response.send_message(f"Oups ! Il y a eu une erreur lors de la création de la session.", ephemeral=True)
+        await interaction.response.send_message(f"Oups ! Il y a eu une erreur lors de la création de la session.\nVérifiez que vous avez rempli les champs correctement.", ephemeral=True)
         logger.error(error)
         
 class VoteSelectMenu(discord.ui.Select):
@@ -86,6 +90,22 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.task_expirepoll.start()
+
+    def cog_unload(self):
+        self.task_expirepoll.cancel()
+        
+    @tasks.loop(seconds=30.0)
+    async def task_expirepoll(self):
+        for guild in self.bot.guilds:
+            sess = copy(self.get_poll_sessions(guild))
+            for s in sess:
+                if sess[s]['start_time'] + sess[s]['timeout'] <= time.time():
+                    embed = self.embed_poll_results(guild, s)
+                    channel = self.bot.get_channel(sess[s]['channel_id'])
+                    self.delete_poll_session(guild, s)
+                    await channel.send('**Sondage expiré**', embed=embed)
+        
         
     @commands.Cog.listener()
     async def on_ready(self):
@@ -97,14 +117,14 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
             # Création des tables SQLite
             conn = get_sqlite_database('polls', 'g' + str(guild.id))
             cursor = conn.cursor()
-            cursor.execute("CREATE TABLE IF NOT EXISTS polls (session_id TEXT PRIMARY KEY, title TEXT, choices TEXT, start_time REAL, timeout INTEGER, author_id INT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS polls (session_id TEXT PRIMARY KEY, title TEXT, choices TEXT, start_time REAL, timeout INTEGER, author_id INTEGER, channel_id INTEGER)")
             cursor.execute("CREATE TABLE IF NOT EXISTS votes (vote_id TEXT PRIMARY KEY, session_id INTEGER, user_id INTEGER, choice TEXT, FOREIGN KEY (session_id) REFERENCES polls(session_id))")
             conn.commit()
             
             # Mettre les polls en cache
             cursor.execute("SELECT * FROM polls")
             polls = cursor.fetchall()
-            cache[guild.id] = {p[0]: {'title': p[1], 'choices': p[2], 'start_time': p[3], 'timeout': p[4], 'author_id': p[5]} for p in polls}
+            cache[guild.id] = {p[0]: {'title': p[1], 'choices': p[2], 'start_time': p[3], 'timeout': p[4], 'author_id': p[5], 'channel_id': p[6]} for p in polls}
             
             cursor.close()
             conn.close()
@@ -117,7 +137,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         choices = [c.strip() for c in choices if c]
         return choices
         
-    def create_poll_session(self, author: discord.Member, title: str, choices: str, timeout: int = 0):
+    def create_poll_session(self, author: discord.Member, channel: discord.TextChannel, title: str, choices: str, timeout: int = 0):
         guild = author.guild
         start_time = time.time()
         sessionid = hex(int(start_time))[2:]
@@ -125,7 +145,8 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         
         conn = get_sqlite_database('polls', 'g' + str(guild.id))
         cursor = conn.cursor()
-        cursor.execute("INSERT OR REPLACE INTO polls (session_id, title, choices, start_time, timeout, author_id) VALUES (?, ?, ?, ?, ?, ?)", (sessionid, title, choices, start_time, timeout, author.id))
+        cursor.execute("INSERT OR REPLACE INTO polls (session_id, title, choices, start_time, timeout, author_id, channel_id) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                       (sessionid, title, choices, start_time, timeout, author.id, channel.id))
         conn.commit()
         cursor.close()
         conn.close()
@@ -140,7 +161,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         cursor.close()
         conn.close()
         
-        sessionsdict = {s[0]: {'title': s[1], 'choices': self.parse_choices(s[2]), 'start_time': s[3], 'timeout': s[4], 'author_id':s[5]} for s in sessions}
+        sessionsdict = {s[0]: {'title': s[1], 'choices': self.parse_choices(s[2]), 'start_time': s[3], 'timeout': s[4], 'author_id':s[5], 'channel_id': s[6]} for s in sessions}
         return sessionsdict
     
     def delete_poll_session(self, guild: discord.Guild, session_id: str):
