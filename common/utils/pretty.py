@@ -11,7 +11,7 @@ def bar_chart(value: int, max_value: int, char_value: int = 1, use_half_bar: boo
     :returns: str
     """
     if max_value == 0:
-        return ''
+        return ' '
     nb_bars = (value / max_value) * 100 / char_value
     bars = '█' * int(nb_bars)
     if not nb_bars.is_integer() and use_half_bar:

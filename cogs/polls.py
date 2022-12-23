@@ -1,3 +1,5 @@
+# pyright: reportGeneralTypeIssues=false
+
 import discord
 import logging
 import time
@@ -57,7 +59,8 @@ class VoteSelectMenu(discord.ui.Select):
         value = self.values[0]
         self.cog.set_member_vote(interaction.user, self.session_id, value)
         await self.original_interaction.edit_original_response(content=f"**Merci d'avoir voté !**\nVotre réponse (*{value}*) a bien été prise en compte !", view=None)
-        session = self.cog.polls_cache[interaction.guild.id][self.session_id]
+        sessions = self.cog.get_poll_sessions(interaction.guild)
+        session = sessions[self.session_id]
         await interaction.channel.send(f"**{interaction.user}** a participé au sondage ***{session['title']}***\nParticipez-y aussi avec `/poll vote` !", delete_after=20.0)
 
 class Confirmbutton(discord.ui.View):
@@ -110,26 +113,18 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         
     @commands.Cog.listener()
     async def on_ready(self):
-        self.polls_cache = self.update_storage()
+        self.initialize_storage()
         
-    def update_storage(self):
-        cache = {}
+    def initialize_storage(self):
         for guild in self.bot.guilds:
-            # Création des tables SQLite
             conn = get_sqlite_database('polls', 'g' + str(guild.id))
             cursor = conn.cursor()
             cursor.execute("CREATE TABLE IF NOT EXISTS polls (session_id TEXT PRIMARY KEY, title TEXT, choices TEXT, start_time REAL, timeout INTEGER, author_id INTEGER, channel_id INTEGER)")
             cursor.execute("CREATE TABLE IF NOT EXISTS votes (vote_id TEXT PRIMARY KEY, session_id INTEGER, user_id INTEGER, choice TEXT, FOREIGN KEY (session_id) REFERENCES polls(session_id))")
             conn.commit()
             
-            # Mettre les polls en cache
-            cursor.execute("SELECT * FROM polls")
-            polls = cursor.fetchall()
-            cache[guild.id] = {p[0]: {'title': p[1], 'choices': p[2], 'start_time': p[3], 'timeout': p[4], 'author_id': p[5], 'channel_id': p[6]} for p in polls}
-            
             cursor.close()
             conn.close()
-        return cache
         
     # POLLS ----------------------------------------------
         
@@ -153,7 +148,7 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         cursor.close()
         conn.close()
         
-        self.polls_cache = self.update_storage()
+        self.polls_cache = self.initialize_storage()
     
     def get_poll_sessions(self, guild: discord.Guild):
         conn = get_sqlite_database('polls', 'g' + str(guild.id))
@@ -175,10 +170,9 @@ class Polls(commands.GroupCog, group_name="poll", description="Gestion des anniv
         cursor.close()
         conn.close()
         
-        self.polls_cache = self.update_storage()
-        
     def embed_poll_results(self, guild: discord.Guild, session_id: str):
-        poll = self.polls_cache[guild.id][session_id]
+        polls = self.get_poll_sessions(guild)
+        poll = polls[session_id]
         votes = self.get_all_votes_from_session(guild, session_id)
         
         chunks = []
