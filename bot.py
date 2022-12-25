@@ -12,6 +12,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s (%(name)s %(module)s) %(message)s",
 )
+logger = logging.getLogger('nero.Main')
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -57,7 +58,8 @@ async def main():
             elif isinstance(error, app_commands.errors.MissingPermissions):
                 msg = f"**Erreur ·** Tu manques des permissions `" + ", ".join(error.missing_permissions) + "` pour cette commande !"
                 return await interaction.response.send_message(content=msg)
-            
+            else:
+                logger.error(f'Erreur App_commands : {error}', exc_info=True)
 
         @bot.hybrid_command(name="ping", description="Renvoie un pong")
         async def ping(ctx: commands.Context) -> None:
