@@ -167,7 +167,7 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
         if image_preview:
             em.set_image(url=image_preview)
         if media_links:
-            linkstxt = [f"[{l.split('/')[-1:]}]({l})" for l in media_links]
+            linkstxt = [f"[{l.split('/')[-1]}]({l})" for l in media_links]
             em.add_field(name="Média(s)", value='\n'.join(linkstxt))
             
         return em
