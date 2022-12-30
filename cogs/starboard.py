@@ -136,7 +136,7 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
         if message.reference:
             try:
                 reference_msg : discord.Message = await message.channel.fetch_message(message.reference.message_id)
-                reply_text = f'> **{reference_msg.author.name}** · <t:{int(reference_msg.created_at.timestamp())}>\n> {reference_msg.clean_content}\n\n'
+                reply_text = f"> **{reference_msg.author.name}** · <t:{int(reference_msg.created_at.timestamp())}>\n> {reference_msg.clean_content if reference_msg.clean_content else 'Contenu multimédia'}\n\n"
             except Exception as e:
                 logger.info(e, exc_info=True)
         
