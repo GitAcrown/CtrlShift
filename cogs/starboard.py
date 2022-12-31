@@ -140,7 +140,7 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
                 reply_text = f"> **{reference_msg.author.name}** · <t:{int(reference_msg.created_at.timestamp())}>\n> {reference_msg.clean_content if reference_msg.clean_content else 'Contenu multimédia'}\n\n"
                 _reply_img = [a for a in reference_msg.attachments if a.content_type in ['image/jpeg', 'image/png', 'image/gif', 'image/webp']]
                 if _reply_img:
-                    reply_thumb = reply_img[0]
+                    reply_thumb = _reply_img[0]
             except Exception as e:
                 logger.info(e, exc_info=True)
         
