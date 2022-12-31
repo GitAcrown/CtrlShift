@@ -154,7 +154,7 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
         image_preview = None
         media_links = []
         for a in message.attachments:
-            if a.content_type in ['image/jpeg', 'image/png', 'image/gif', 'image/webp']:
+            if a.content_type in ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] and not image_preview:
                 image_preview = a.url
             else:
                 media_links.append(a.url)
@@ -167,7 +167,7 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
         if image_preview:
             em.set_image(url=image_preview)
         if media_links:
-            linkstxt = [f"[{l.split('/')[-1]}]({l})" for l in media_links]
+            linkstxt = [f"[[{l.split('/')[-1]}]]({l})" for l in media_links]
             em.add_field(name="Média(s)", value='\n'.join(linkstxt))
             
         return em
