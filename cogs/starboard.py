@@ -133,10 +133,14 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
             raise KeyError(f"Le message '{message.id}' n'a pas de données liées")
         
         reply_text = ''
+        reply_thumb = None
         if message.reference:
             try:
                 reference_msg : discord.Message = await message.channel.fetch_message(message.reference.message_id)
                 reply_text = f"> **{reference_msg.author.name}** · <t:{int(reference_msg.created_at.timestamp())}>\n> {reference_msg.clean_content if reference_msg.clean_content else 'Contenu multimédia'}\n\n"
+                _reply_img = [a for a in reference_msg.attachments if a.content_type in ['image/jpeg', 'image/png', 'image/gif', 'image/webp']]
+                if _reply_img:
+                    reply_thumb = reply_img[0]
             except Exception as e:
                 logger.info(e, exc_info=True)
         
@@ -166,6 +170,8 @@ class Starboard(commands.GroupCog, group_name="star", description="Gestion et ma
         
         if image_preview:
             em.set_image(url=image_preview)
+        if reply_thumb:
+            em.set_thumbnail(url=reply_thumb)
         if media_links:
             linkstxt = [f"[[{l.split('/')[-1]}]]({l})" for l in media_links]
             em.add_field(name="Média(s)", value='\n'.join(linkstxt))
