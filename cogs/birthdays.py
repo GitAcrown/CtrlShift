@@ -128,6 +128,18 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         conn.close()
         return bdays
     
+    def get_zodiac_sign(self, user_id: int):
+        bday = self.get_birthday(user_id)
+        user_bday = f"{bday[0]}/{bday[1]}"
+        userdate = datetime.strptime(user_bday, '%d/%m').replace(year=datetime.today().year)
+        
+        zodiacs = [(120, 'Capricorne', '♑'), (218, 'Verseau', '♒'), (320, 'Poisson', '♓'), (420, 'Bélier', '♈'), (521, 'Taureau', '♉'),
+           (621, 'Gémeaux', '♊'), (722, 'Cancer', '♋'), (823, 'Lion', '♌'), (923, 'Vierge', '♍'), (1023, 'Balance', '♎'),
+           (1122, 'Scorpion', '♏'), (1222, 'Sagittaire', '♐'), (1231, 'Capricorne', '♑')]
+        date_number = int("".join((str(userdate.month), '%02d' % userdate.day)))
+        for z in zodiacs:
+            if date_number <= z[0]:
+                return z[1], z[2]
     
     def get_guild_settings(self, guild: discord.Guild) -> dict:
         """Obtenir les paramètres du serveur
@@ -226,18 +238,19 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         :param member: Utilisateur visé par la commande
         """
         today = datetime.today()
-        bday = self.get_birthday(member)
+        bday = self.get_birthday(member.id)
         if bday:
             user_bday = f"{bday[0]}/{bday[1]}"
             userdate = datetime.strptime(user_bday, '%d/%m')
             userdate = userdate.replace(year=today.year)
-            msg = f"__Anniversaire :__ **{user_bday}**\n"
+            msg = f"**Anniversaire ·** {user_bday}\n"
 
             if today >= userdate:
                 next_date = userdate.replace(year=today.year + 1)
             else:
                 next_date = userdate
-            msg += f"__Prochain :__ `{next_date.strftime('%d/%m/%Y')}`"
+            msg += f"**Prochain ·** <t:{next_date.timestamp()}:D>"
+            msg += f"**Signe Astrologique ·** ***{' '.join(self.get_zodiac_sign(member.id))}***"
         
             em = discord.Embed(title=f"Anniversaire de **{member.display_name}**", description=msg, color=0x2F3136)
             em.set_thumbnail(url=member.display_avatar.url)
