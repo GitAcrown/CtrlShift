@@ -249,8 +249,8 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
                 next_date = userdate.replace(year=today.year + 1)
             else:
                 next_date = userdate
-            msg += f"**Prochain ·** <t:{next_date.timestamp()}:D>\n"
-            msg += f"**Signe Astrologique ·** ***{' '.join(self.get_zodiac_sign(member.id))}***"
+            msg += f"**Prochain ·** <t:{int(next_date.timestamp())}:D>\n"
+            msg += f"**Signe Astrologique ·** {' '.join(self.get_zodiac_sign(member.id))}"
         
             em = discord.Embed(title=f"Anniversaire de **{member.display_name}**", description=msg, color=0x2F3136)
             em.set_thumbnail(url=member.display_avatar.url)
