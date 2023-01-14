@@ -1,19 +1,21 @@
 import discord
 import logging
-import time
 from datetime import datetime
 import operator
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands, tasks
-from tinydb import Query
 from typing import Optional
+import json
 
 from common.dataio import get_sqlite_database
 
 logger = logging.getLogger('nero.Birthdays')
 
-bday_group = app_commands.Group(name="bday", description="Gestion des anniversaires")
+DEFAULT_SETTINGS = [
+    ('BirthdayRoleID', 0),
+    ('NotificationChannelID', 0)
+]
 
 MONTHS_CHOICES = [
     Choice(name='Janvier', value=1),
@@ -41,8 +43,38 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
             callback=self.ctx_usercommand_bday
         )
         self.bot.tree.add_command(self.context_menu)
-        self.initialize_database()
         
+    #     self.task_check_birthdays.start()
+        
+    # @commands.Cog.listener()
+    # async def on_ready(self):
+    #     self.initialize_database()
+        
+    # @commands.Cog.listener()
+    # async def on_guild_join(self, guild: discord.Guild):
+    #     self.initialize_database()
+
+    # def cog_unload(self):
+    #     self.task_check_birthdays.cancel()
+        
+    # @tasks.loop(minutes=1.0)
+    # async def task_check_birthdays(self):
+    #     bdays = self.get_all_birthdays()
+    #     today = datetime.now().strftime('%d/%m')
+    #     for bday in bdays:
+    #         if f"{bday[1]}/{bday[2]}" == today:
+                
+    #             for guild in self.bot.guilds:
+    #                 settings = self.get_guild_settings(guild)
+    #                 if settings['BirthdayRoleID'] and :
+    #                     bdayrole = guild.get_role(int(settings['BirthdayRoleID']))
+    #                     try:
+    #                         member = guild.get_member(bday[0])
+    #                     except:
+    #                         break
+    #                     if bdayrole not in member.roles:
+    #                         await member.add_roles([])
+                    
     # USER LEVEL -----------------------------------
     
     def initialize_database(self):
@@ -52,19 +84,15 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         conn.commit()
         cursor.close()
         conn.close()
-        
-    # def import_tinydb_to_sqlite(self):
-    #     db = get_tinydb_database('birthdays')
-    #     tdb = db.all()
-        
-    #     conn = get_sqlite_database('birthdays')
-    #     cursor = conn.cursor()
-
-    #     for u in tdb:
-    #         cursor.execute("INSERT OR IGNORE INTO users (user_id, day, month) VALUES (?, ?, ?)", (u['uid'], u['day'], u['month']))
-    #     conn.commit()
-    #     cursor.close()
-    #     conn.close()
+        for guild in self.bot.guilds:
+            conn = get_sqlite_database('birthdays', 'g' + str(guild.id))
+            cursor = conn.cursor()
+            cursor.execute("CREATE TABLE IF NOT EXISTS settings (name TINYTEXT PRIMARY KEY, value TEXT)")
+            for name, default_value in DEFAULT_SETTINGS:
+                cursor.execute("INSERT OR IGNORE INTO settings (name, value) VALUES (?, ?)", (name, json.dumps(default_value)))
+            conn.commit()
+            cursor.close()
+            conn.close()
         
     def add_birthday(self, user_id: int, day: int, month: int):
         conn = get_sqlite_database('birthdays')
@@ -99,6 +127,38 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         cursor.close()
         conn.close()
         return bdays
+    
+    
+    def get_guild_settings(self, guild: discord.Guild) -> dict:
+        """Obtenir les paramètres du serveur
+
+        :param guild: Serveur des paramètres à récupérer
+        :return: dict
+        """
+        conn = get_sqlite_database('birthdays', 'g' + str(guild.id))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM settings")
+        settings = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        from_json = {s[0] : json.loads(s[1]) for s in settings}
+        return from_json
+    
+    def set_guild_settings(self, guild: discord.Guild, update: dict):
+        """Met à jours les paramètres du serveur
+
+        :param guild: Serveur à mettre à jour
+        :param update: Paramètres à mettre à jour (toutes les valeurs seront automatiquement sérialisés en JSON)
+        """
+        conn = get_sqlite_database('birthdays', 'g' + str(guild.id))
+        cursor = conn.cursor()
+        for upd in update:
+            cursor.execute("UPDATE settings SET value=? WHERE name=?", (json.dumps(update[upd]), upd))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    
         
     @app_commands.command(name="set")
     @app_commands.choices(month=MONTHS_CHOICES)
@@ -166,7 +226,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         :param member: Utilisateur visé par la commande
         """
         today = datetime.today()
-        bday = self.get_birthday(interaction.user.id)
+        bday = self.get_birthday(member)
         if bday:
             user_bday = f"{bday[0]}/{bday[1]}"
             userdate = datetime.strptime(user_bday, '%d/%m')
