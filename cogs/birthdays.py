@@ -180,6 +180,10 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         :param day: Jour de naissance (1-31)
         :param month: Mois de naissance
         """
+        try:
+            datetime.strptime(f'{day}/{month}', '%d/%m')
+        except:
+            return await interaction.response.send_message(f"**Erreur ·** La date fournie est invalide, veuillez vérifier les valeurs données.", ephemeral=True)
         self.add_birthday(interaction.user.id, day, month)
         await interaction.response.send_message(f"**Votre anniversaire ({day}/{month}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
         
