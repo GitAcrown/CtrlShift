@@ -20,14 +20,14 @@ logger = logging.getLogger('nero.Quotes')
 FONTS = [
     'Roboto-Regular.ttf',
     'BebasNeue-Regular.ttf',
-    'Minecrafter.Reg.ttf',
+    'Minecraft.ttf',
     'coolvetica rg.otf',
     'OldLondon.ttf',
 ]
 FONT_CHOICES = [
     Choice(name="Roboto", value="Roboto-Regular.ttf"),
     Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf"),
-    Choice(name="Minecrafter", value="Minecrafter.Reg.ttf"),
+    Choice(name="Minecraft", value="Minecraft.ttf"),
     Choice(name="Coolvetica", value="coolvetica rg.otf"),
     Choice(name="Old London", value="OldLondon.ttf"),
 ]
