@@ -282,7 +282,7 @@ class Quotes(commands.Cog):
         qy = (y1/2-y2/2)
 
         d.text((qx, qy), fresh_sentence, align="center", font=fontfile, fill=(255, 255, 255, 255))
-        d.text((x1 / 2 - (x3 / 2), qy + y2 + 6), author_sentence, align="center", font=author_fontfile, fill=(255, 255, 255, 255))
+        d.text((x1 / 2 - (x3 / 2), qy + y2 + 2), author_sentence, align="center", font=author_fontfile, fill=(255, 255, 255, 255))
         out = img.convert('RGB')
         out = out.resize((512, 512))
         with BytesIO() as buffer:
