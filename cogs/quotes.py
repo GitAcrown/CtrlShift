@@ -1,15 +1,30 @@
 from typing import Optional
 
 import discord
+import random
 import logging
+import os
 import aiohttp
+import textwrap
 from discord import app_commands
+from discord.app_commands import Choice
 from discord.ext import commands
 from tinydb import Query
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
 
-from common.dataio import get_tinydb_database
+from common.dataio import get_tinydb_database, get_package_path
 
 logger = logging.getLogger('nero.Quotes')
+
+FONTS = [
+    'Roboto-Regular.ttf',
+    'BebasNeue-Regular.ttf',
+]
+FONT_CHOICES = [
+    Choice(name="Roboto-Regular", value="Roboto-Regular.ttf"),
+    Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf")
+]
 
 class QuoteView(discord.ui.View):
     def __init__(self, quote_url: str, interaction: discord.Interaction):
@@ -143,6 +158,10 @@ class Quotes(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.context_menu = app_commands.ContextMenu(
+            name='Quotifier',
+            callback=self.ctx_quotify_message
+        )
     
     def quote_cooldown(interaction: discord.Interaction):
         if interaction.user.id == 172376505354158080:
@@ -176,6 +195,152 @@ class Quotes(commands.Cog):
         :param position: Commencer le défilement par la citation n°<position> dans votre inventaire
         """
         await MyQuotesView(interaction, position).start()
+        
+    @app_commands.command(name='quotify')
+    @app_commands.choices(font=FONT_CHOICES)
+    async def custom_quote(self, interaction: discord.Interaction, message_id: str, font: Optional[str] = None):
+        """Permet de créer une citation imagée personnalisée depuis le message de votre choix
+
+        :param font: Police de caractères à utiliser (si non spécifié, une police aléatoire sera choisie)
+        :param message_id: ID du message à quotifier
+        """
+        message_id = int(message_id) if message_id.isdigit() else message_id
+        try:
+            message : discord.Message = await interaction.channel.fetch_message(message_id)
+        except discord.NotFound:
+            return await interaction.response.send_message("Impossible de trouver le message demandé.", ephemeral=True)
+        except discord.HTTPException:
+            return await interaction.response.send_message("Une erreur est survenue.", ephemeral=True)
+        try:
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, font))
+        except commands.BadArgument as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+        
+    async def alternate_quotify_message(self, message: discord.Message, fontname: str = None) -> discord.File:
+        x1 = 512
+        y1 = 512
+        if not fontname:
+            fontname = random.choice(FONTS)
+        font = get_package_path('quotes') + f"/{fontname}"
+        sentence = f"“{message.clean_content}”"
+        if len(sentence) > 200:
+            raise commands.BadArgument("Le message est trop long.")
+        author_sentence = f"— {message.author.display_name}"
+
+        backgroundraw = await message.author.display_avatar.with_size(512).read()
+        background = Image.open(BytesIO(backgroundraw))
+        background = background.convert('RGBA')
+        gradient = Image.new('RGBA', background.size, (0, 0, 0, 0))
+        gradient_draw = ImageDraw.Draw(gradient)
+        gradient_draw.polygon([(0, 0), (0, background.height), (background.width, background.height), (background.width, 0)], fill=(0, 0, 0, 125))
+        img = Image.alpha_composite(background, gradient)
+        d = ImageDraw.Draw(img)
+        
+        fontfile = ImageFont.truetype(font, 36)
+        author_fontfile = ImageFont.truetype(font, 28)
+
+        sum = 0
+        for letter in sentence:
+            sum += d.textsize(letter, font=fontfile)[0]
+
+        average_length_of_letter = sum/len(sentence)
+
+        number_of_letters_for_each_line = (x1/1.618)/average_length_of_letter
+        incrementer = 0
+        fresh_sentence = ''
+
+        for letter in sentence:
+            if (letter == '-'):
+                fresh_sentence += '\n\n' + letter
+            elif (incrementer < number_of_letters_for_each_line):
+                fresh_sentence += letter
+            else:
+                if (letter == ' '):
+                    fresh_sentence += '\n'
+                    incrementer = 0
+                else:
+                    fresh_sentence += letter
+            incrementer += 1
+
+        dim = d.textsize(fresh_sentence, font=fontfile)
+        authdim = d.textsize(author_sentence, font=author_fontfile)
+        x2 = dim[0]
+        y2 = dim[1]
+        x3 = authdim[0]
+
+        qx = (x1/2 - x2/2)
+        qy = (y1/2-y2/2)
+
+        d.text((qx, qy), fresh_sentence, align="center", font=fontfile, fill=(255, 255, 255, 255))
+        d.text((x1 / 2 - (x3 / 2), qy + round(y2 * 1.1)), author_sentence, align="center", font=author_fontfile, fill=(255, 255, 255, 255))
+        out = img.convert('RGB')
+        out = out.resize((512, 512))
+        with BytesIO() as buffer:
+            out.save(buffer, format='PNG')
+            buffer.seek(0)
+            return discord.File(buffer, filename=f'quote_{message.id}.png')
+        
+    async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
+        """Menu contextuel permettant de transformer un message en citation imagée"""
+        try:
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message))
+        except commands.BadArgument as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+
+    # async def quotify_message(self, message: discord.Message, font: str = None) -> discord.File:
+    #     """Crée une citation imagée à partir d'un message
+    #     """
+    #     backgroundraw = await message.author.display_avatar.with_size(512).read()
+    #     background = Image.open(BytesIO(backgroundraw))
+    #     background = background.convert('RGBA')
+    #     txtfront = Image.new('RGBA', background.size, (255, 255, 255, 0))
+    #     if not font:
+    #         font = random.choice(FONTS)
+    #     text = f"“{message.clean_content}”"
+    #     authortxt = f"— {message.author.display_name}"
+        
+    #     # Ajouter un gradient transparent sur l'image de façon à ce que le texte soit plus lisible
+    #     gradient = Image.new('RGBA', background.size, (0, 0, 0, 0))
+    #     gradient_draw = ImageDraw.Draw(gradient)
+    #     gradient_draw.polygon([(0, 0), (0, background.height), (background.width, background.height), (background.width, 0)], fill=(0, 0, 0, 150))
+    #     background = Image.alpha_composite(background, gradient)
+        
+        
+    #     font_size = 70
+    #     while True:
+    #         fontfile = ImageFont.truetype(get_package_path('quotes') + f"/{font}", font_size)
+    #         textwidth, textheight = fontfile.getsize(text)
+    #         if textwidth < background.width and textheight < background.height:
+    #             break
+    #         font_size -= 2
+            
+    #     author_font_size = font_size // 2
+    #     while True:
+    #         fontfile = ImageFont.truetype(get_package_path('quotes') + f"/{font}", author_font_size)
+    #         textwidth, textheight = fontfile.getsize(authortxt)
+    #         if textwidth < background.width and textheight < background.height:
+    #             break
+    #         author_font_size -= 1
+            
+    #     # Ajouter authortxt en dessous de text aligné à droite par rapport à text
+        
+    #     fontfile = ImageFont.truetype(get_package_path('quotes') + f"/{font}", font_size)
+    #     authorfontfile = ImageFont.truetype(get_package_path('quotes') + f"/{font}", author_font_size)
+    #     text = textwrap.fill(text, width=40)
+    #     textwidth, textheight = fontfile.getsize(text)
+    #     textwidth_author, textheight_author = authorfontfile.getsize(authortxt)
+        
+    #     d = ImageDraw.Draw(txtfront)
+    #     d.text(((background.width - textwidth) / 2, (background.height - textheight) / 2), text, font=fontfile, fill=(255, 255, 255), align='center')
+    #     d.text(((background.width - textwidth_author) / 2, (background.height - textheight_author) / 2 + textheight), authortxt, font=authorfontfile, fill=(255, 255, 255), align='right')
+        
+    #     out = Image.alpha_composite(background, txtfront)
+    #     out = out.convert('RGB')
+    #     out = out.resize((512, 512))
+    #     with BytesIO() as buffer:
+    #         out.save(buffer, format='PNG')
+    #         buffer.seek(0)
+    #         return discord.File(buffer, filename=f'quote_{message.id}.png')
         
     async def cog_unload(self) -> None:
         self.session.close()

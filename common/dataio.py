@@ -3,6 +3,7 @@ from tinydb import TinyDB
 import sqlite3
 
 DEFAULT_DATA_PATH = "database/"
+DEFAULT_PACKAGE_PATH = "cogs/packages/"
 
 def get_tinydb_database(group_name: str, subgroup_name: str = "GLOBAL") -> TinyDB:
     """Récupérer la base de données TinyDB.
@@ -31,4 +32,10 @@ def get_sqlite_database(folder_name: str, db_name: str = 'global') -> sqlite3.Co
     conn = sqlite3.connect(str(db_file))
     return conn
 
-    
+def get_package_path(name: str) -> str:
+    """Renvoie le chemin vers les packs de données d'un module
+
+    :param name: Nom du module
+    :return: str
+    """
+    return DEFAULT_PACKAGE_PATH + name
