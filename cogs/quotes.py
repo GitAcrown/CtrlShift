@@ -228,14 +228,15 @@ class Quotes(commands.Cog):
             raise commands.BadArgument("Le message est trop long.")
         author_sentence = f"— {message.author.display_name}"
 
-        backgroundraw = await message.author.display_avatar.with_size(512).read()
-        background = Image.open(BytesIO(backgroundraw))
-        background = background.convert('RGBA')
+        basebg = Image.new('RGBA', (x1, y1), (0, 0, 0, 0))
+        userpfp = await message.author.display_avatar.read()
+        userbg = Image.open(BytesIO(userpfp))
+        userbg = userbg.resize((x1, y1)).convert('RGBA')
+        background = Image.alpha_composite(basebg, userbg)
         gradient = Image.new('RGBA', background.size, (0, 0, 0, 0))
         gradient_draw = ImageDraw.Draw(gradient)
         gradient_draw.polygon([(0, 0), (0, background.height), (background.width, background.height), (background.width, 0)], fill=(0, 0, 0, 125))
         img = Image.alpha_composite(background, gradient)
-        img.resize((512, 512), resample=Image.LANCZOS)
         d = ImageDraw.Draw(img)
         
         fontfile = ImageFont.truetype(font, 36)
