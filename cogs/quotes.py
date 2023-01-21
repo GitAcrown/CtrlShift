@@ -32,7 +32,6 @@ FONT_CHOICES = [
     Choice(name="Old London", value="OldLondon.ttf"),
 ]
 
-refresh_emoji = discord.Emoji(name="refresh", id=1066371350857531502)
 
 class QuoteView(discord.ui.View):
     def __init__(self, quote_url: str, interaction: discord.Interaction):
@@ -62,27 +61,6 @@ class QuoteView(discord.ui.View):
         
     async def on_timeout(self) -> None:
         await self.interaction.edit_original_response(view=None)
-        
-class QuotifyRandomView(discord.ui.View):
-    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, message: discord.Message):
-        super().__init__(timeout=30)
-        self._cog = cog
-        self.interaction = interaction
-        self.message = message
-        
-    @discord.ui.button(emoji=refresh_emoji, label='Générer à nouveau', style=discord.ButtonStyle.blurple)
-    async def regenerate_img(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Regénérer l'image"""
-        try:
-            file = await self._cog.alternate_quotify_message(self.message)
-        except Exception as e:
-            logger.error(f"Error while regenerating image: {e}")
-            await interaction.response.send_message("Une erreur est survenue lors de la génération de l'image.", ephemeral=True)
-        await self.interaction.edit_original_response(file=file)
-        
-    async def on_timeout(self) -> None:
-        await self.interaction.edit_original_response(view=None)
-
 
 
 class MyQuotesView(discord.ui.View):
@@ -315,7 +293,7 @@ class Quotes(commands.Cog):
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
         """Menu contextuel permettant de transformer un message en citation imagée"""
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message), view=QuotifyRandomView(self, interaction, message))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeue-Regular.ttf'))
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
 
