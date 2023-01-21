@@ -232,7 +232,7 @@ class Quotes(commands.Cog):
         sentence = f"“{message.clean_content}”" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"\"{message.clean_content}\""
         if len(sentence) > 200:
             raise commands.BadArgument("Le message est trop long.")
-        author_sentence = f"@{message.author.name}, {datetime.now().year}"
+        author_sentence = f"@{message.author.name}, {message.created_at.year}"
 
         basebg = Image.new('RGBA', (x1, y1), (0, 0, 0, 0))
         userpfp = await message.author.display_avatar.read()
