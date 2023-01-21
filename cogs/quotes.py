@@ -235,6 +235,7 @@ class Quotes(commands.Cog):
         gradient_draw = ImageDraw.Draw(gradient)
         gradient_draw.polygon([(0, 0), (0, background.height), (background.width, background.height), (background.width, 0)], fill=(0, 0, 0, 125))
         img = Image.alpha_composite(background, gradient)
+        img.resize((512, 512), resample=Image.LANCZOS)
         d = ImageDraw.Draw(img)
         
         fontfile = ImageFont.truetype(font, 36)
