@@ -162,6 +162,7 @@ class Quotes(commands.Cog):
             name='Quotifier',
             callback=self.ctx_quotify_message
         )
+        self.bot.tree.add_command(self.context_menu)
     
     def quote_cooldown(interaction: discord.Interaction):
         if interaction.user.id == 172376505354158080:
