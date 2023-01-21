@@ -230,10 +230,10 @@ class Quotes(commands.Cog):
         if not fontname:
             fontname = random.choice(FONTS)
         font = get_package_path('quotes') + f"/{fontname}"
-        sentence = f"“{message.clean_content}”"
+        sentence = f"“{message.clean_content}”" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"\"{message.clean_content}\""
         if len(sentence) > 200:
             raise commands.BadArgument("Le message est trop long.")
-        author_sentence = f"— {message.author.name}"
+        author_sentence = f"— {message.author.name}" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"- {message.author.name}"
 
         basebg = Image.new('RGBA', (x1, y1), (0, 0, 0, 0))
         userpfp = await message.author.display_avatar.read()
