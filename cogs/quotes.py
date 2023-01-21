@@ -20,11 +20,19 @@ logger = logging.getLogger('nero.Quotes')
 FONTS = [
     'Roboto-Regular.ttf',
     'BebasNeue-Regular.ttf',
+    'Minecrafter.Reg.ttf',
+    'coolvetica rg.otf',
+    'OldLondon.ttf',
 ]
 FONT_CHOICES = [
-    Choice(name="Roboto-Regular", value="Roboto-Regular.ttf"),
-    Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf")
+    Choice(name="Roboto", value="Roboto-Regular.ttf"),
+    Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf"),
+    Choice(name="Minecrafter", value="Minecrafter.Reg.ttf"),
+    Choice(name="Coolvetica", value="coolvetica rg.otf"),
+    Choice(name="Old London", value="OldLondon.ttf"),
 ]
+
+refresh_emoji = discord.Emoji(name="refresh", id=1066371350857531502)
 
 class QuoteView(discord.ui.View):
     def __init__(self, quote_url: str, interaction: discord.Interaction):
@@ -54,6 +62,27 @@ class QuoteView(discord.ui.View):
         
     async def on_timeout(self) -> None:
         await self.interaction.edit_original_response(view=None)
+        
+class QuotifyRandomView(discord.ui.View):
+    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, message: discord.Message):
+        super().__init__(timeout=30)
+        self._cog = cog
+        self.interaction = interaction
+        self.message = message
+        
+    @discord.ui.button(emoji=refresh_emoji, label='Générer à nouveau', style=discord.ButtonStyle.blurple)
+    async def regenerate_img(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Regénérer l'image"""
+        try:
+            file = await self._cog.alternate_quotify_message(self.message)
+        except Exception as e:
+            logger.error(f"Error while regenerating image: {e}")
+            await interaction.response.send_message("Une erreur est survenue lors de la génération de l'image.", ephemeral=True)
+        await self.interaction.edit_original_response(file=file)
+        
+    async def on_timeout(self) -> None:
+        await self.interaction.edit_original_response(view=None)
+
 
 
 class MyQuotesView(discord.ui.View):
@@ -275,7 +304,7 @@ class Quotes(commands.Cog):
         qy = (y1/2-y2/2)
 
         d.text((qx, qy), fresh_sentence, align="center", font=fontfile, fill=(255, 255, 255, 255))
-        d.text((x1 / 2 - (x3 / 2), qy + round(y2 * 1.1)), author_sentence, align="center", font=author_fontfile, fill=(255, 255, 255, 255))
+        d.text((x1 / 2 - (x3 / 2), qy + y2 + 6), author_sentence, align="center", font=author_fontfile, fill=(255, 255, 255, 255))
         out = img.convert('RGB')
         out = out.resize((512, 512))
         with BytesIO() as buffer:
@@ -286,7 +315,7 @@ class Quotes(commands.Cog):
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
         """Menu contextuel permettant de transformer un message en citation imagée"""
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeue-Regular.ttf'))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message), view=QuotifyRandomView(self, interaction, message))
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
 
