@@ -286,7 +286,7 @@ class Quotes(commands.Cog):
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
         """Menu contextuel permettant de transformer un message en citation imagée"""
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeue-Regular.ttf'))
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
 
