@@ -1,19 +1,18 @@
+from datetime import datetime
+import logging
+import random
+from io import BytesIO
 from typing import Optional
 
-import discord
-import random
-import logging
-import os
 import aiohttp
-import textwrap
+import discord
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from tinydb import Query
-from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+from tinydb import Query
 
-from common.dataio import get_tinydb_database, get_package_path
+from common.dataio import get_package_path, get_tinydb_database
 
 logger = logging.getLogger('nero.Quotes')
 
@@ -233,7 +232,7 @@ class Quotes(commands.Cog):
         sentence = f"“{message.clean_content}”" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"\"{message.clean_content}\""
         if len(sentence) > 200:
             raise commands.BadArgument("Le message est trop long.")
-        author_sentence = f"— {message.author.name}" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"- {message.author.name}"
+        author_sentence = f"{message.author.name}, {datetime.now().year}"
 
         basebg = Image.new('RGBA', (x1, y1), (0, 0, 0, 0))
         userpfp = await message.author.display_avatar.read()
@@ -247,7 +246,7 @@ class Quotes(commands.Cog):
         d = ImageDraw.Draw(img)
         
         fontfile = ImageFont.truetype(font, 36)
-        author_fontfile = ImageFont.truetype(font, 28)
+        author_fontfile = ImageFont.truetype(font, 26)
 
         sum = 0
         for letter in sentence:
