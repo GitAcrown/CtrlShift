@@ -226,7 +226,7 @@ class Quotes(commands.Cog):
         sentence = f"“{message.clean_content}”"
         if len(sentence) > 200:
             raise commands.BadArgument("Le message est trop long.")
-        author_sentence = f"— {message.author.display_name}"
+        author_sentence = f"— {message.author.name}"
 
         basebg = Image.new('RGBA', (x1, y1), (0, 0, 0, 0))
         userpfp = await message.author.display_avatar.read()
