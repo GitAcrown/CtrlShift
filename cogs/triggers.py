@@ -115,7 +115,8 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             if r.headers['Content-Type'] != 'video/mp4':
                 raw_links.append(c)
                 continue
-            attachments.append(discord.File(io.BytesIO(r.content), filename='preview.mp4'))
+            link_id = c.split('/')[-1]
+            attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
         if attachments:
             if raw_links:
                 return await message.reply('\n'.join(raw_links), mention_author=False, files=attachments)
