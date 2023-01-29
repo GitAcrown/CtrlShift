@@ -1,7 +1,9 @@
 import json
 import logging
 import re
+import io
 import sqlite3
+import requests
 import time
 from datetime import datetime
 from copy import copy
@@ -26,6 +28,10 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
     """Collection de triggers utiles"""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.session = requests.Session()
+        
+    def cog_unload(self) -> None:
+        self.session.close()
         
     @commands.Cog.listener()
     async def on_ready(self):
@@ -103,7 +109,11 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         if len(chunks) == 0:
             return
         await message.edit(suppress=True)
-        await message.reply('\n'.join(chunks), mention_author=False)
+        attachments = [discord.File(io.BytesIO(self.session.get(c).content), filename=f"{message.author.display_name}.mp4") for c in chunks]
+        try:
+            await message.reply(mention_author=False, files=attachments)
+        except:
+            await message.reply('\n'.join(chunks), mention_author=False)
         
     # COMMANDES
     
