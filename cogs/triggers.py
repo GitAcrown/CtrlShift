@@ -104,11 +104,24 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         if len(chunks) == 0:
             return
         await message.edit(suppress=True)
-        attachments = [discord.File(io.BytesIO(self.session.get(c).content), filename=f"{message.author.display_name}.mp4") for c in chunks]
-        try:
-            await message.reply(mention_author=False, files=attachments)
-        except:
-            await message.reply('\n'.join(chunks), mention_author=False)
+        attachments = []
+        raw_links = []
+        for c in chunks:
+            try:
+                r = self.session.get(c)
+            except Exception as e:
+                logger.warning(f"Error while fetching {c}: {e}", exc_info=True)
+                return await message.reply(f"**Une erreur est survenue lors de la récupération de `{c}`**\nLe site Tiktok.sauce est peut-être hors-ligne.", mention_author=False)
+            if r.headers['Content-Type'] != 'video/mp4':
+                raw_links.append(c)
+                continue
+            attachments.append(discord.File(io.BytesIO(r.content), filename='preview.mp4'))
+        if attachments:
+            if raw_links:
+                return await message.reply('\n'.join(raw_links), mention_author=False, files=attachments)
+            return await message.reply(files=attachments, mention_author=False)
+        elif raw_links:
+            return await message.reply('\n'.join(raw_links), mention_author=False)
         
     # COMMANDES
     
