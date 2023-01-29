@@ -1,21 +1,16 @@
+import io
 import json
 import logging
 import re
-import io
-import sqlite3
-import requests
-import time
-from datetime import datetime
-from copy import copy
-from typing import Any, Optional, Callable, List, Tuple
+from typing import Any, List, Tuple
 
 import discord
+import requests
 from discord import app_commands
-from discord.ext import commands, tasks
-from tabulate import tabulate
+from discord.ext import commands
 
 from common.dataio import get_sqlite_database
-from common.utils import fuzzy, pretty
+from common.utils import fuzzy
 
 logger = logging.getLogger('nero.Triggers')
 
