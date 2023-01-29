@@ -116,6 +116,10 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
                 raw_links.append(c)
                 continue
             link_id = c.split('/')[-1]
+            size_mb = len(r.content) / (1024 * 1024)
+            if size_mb > 8:
+                raw_links.append(c)
+                continue
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
         if attachments:
             if raw_links:
