@@ -115,10 +115,14 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             if r.headers['Content-Type'] != 'video/mp4':
                 raw_links.append(c)
                 continue
+<<<<<<< HEAD
             if c.endswith('/'):
                 link_id = c.split('/')[-2]
             else:
                 link_id = c.split('/')[-1]
+=======
+            link_id = c.split('/')[-1]
+>>>>>>> 46df61901f770acd11a001ab59d7efbd0cffc23a
             size_mb = len(r.content) / (1024 * 1024)
             if size_mb > 8:
                 raw_links.append(c)
