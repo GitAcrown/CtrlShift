@@ -185,7 +185,7 @@ class Birthdays(commands.GroupCog, group_name="bday", description="Gestion des a
         except:
             return await interaction.response.send_message(f"**Erreur ·** La date fournie est invalide, veuillez vérifier les valeurs données.", ephemeral=True)
         self.add_birthday(interaction.user.id, day, month)
-        await interaction.response.send_message(f"**Votre anniversaire ({day}/{month}) a été enregistré !**\nPour le retirer, utilisez `/bday remove`.")
+        await interaction.response.send_message(f"**Votre anniversaire ({day}/{month}) a été enregistré !**\nPour le retirer, utilisez </bday remove:1041046244765749359>.")
         
     @app_commands.command(name='remove')
     async def bday_remove(self, interaction: discord.Interaction):
