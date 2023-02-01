@@ -5,6 +5,7 @@ import re
 from typing import Any, List, Tuple
 
 import discord
+import asyncio
 import requests
 from discord import app_commands
 from discord.ext import commands
@@ -90,6 +91,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             chunks.append(f"https://fxtwitter.com/{r}")
         if len(result) == 0:
             return
+        await asyncio.sleep(0.25)
         await message.edit(suppress=True)
         await message.reply('\n'.join(chunks), mention_author=False)
         
