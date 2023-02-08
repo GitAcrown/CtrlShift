@@ -26,7 +26,7 @@ class RestorePreviewButton(discord.ui.View):
         self.message = message
         self.value : bool = False
 
-    @discord.ui.button(label='Rétablir les previews', style=discord.ButtonStyle.gray)
+    @discord.ui.button(label="Rétablir les previews Discord", style=discord.ButtonStyle.blurple)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         self.stop()
@@ -34,13 +34,13 @@ class RestorePreviewButton(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction):
         return interaction.user.id == self.message.author.id
     
-class DeletePreviewButton(discord.ui.View):
+class RemoveFxButton(discord.ui.View):
     def __init__(self, message: discord.Message):
         super().__init__()
         self.message = message
         self.value : bool = False
 
-    @discord.ui.button(label='Annuler les previews', style=discord.ButtonStyle.red)
+    @discord.ui.button(label='Annuler la preview fxtwitter', style=discord.ButtonStyle.red)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         self.stop()
@@ -123,7 +123,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         if len(result) == 0:
             return
         
-        view = DeletePreviewButton(message)
+        view = RemoveFxButton(message)
         view.timeout = 10
         
         await asyncio.sleep(0.10)
