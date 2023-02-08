@@ -170,18 +170,20 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
                 raw_links.append(c)
                 continue
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
+        rep = None
         if attachments:
             await message.edit(suppress=True)
             if raw_links:
                 rep = await message.reply('\n'.join(raw_links), mention_author=False, files=attachments, view=view)
             else:
                 rep = await message.reply(files=attachments, mention_author=False, view=view)
+        elif raw_links:
+            rep = await message.reply('\n'.join(raw_links), mention_author=False, view=view)
+        if rep:
             await view.wait()
             if view.value:
                 await message.edit(suppress=False)
             await rep.edit(view=None)
-        elif raw_links:
-            return await message.reply('\n'.join(raw_links), mention_author=False)
         
     # COMMANDES
     
