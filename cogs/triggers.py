@@ -126,7 +126,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         view = RemoveFxButton(message)
         view.timeout = 10
         
-        await asyncio.sleep(0.20)
+        await asyncio.sleep(0.25)
         await message.edit(suppress=True)
         rep = await message.reply('\n'.join(chunks), mention_author=False, view=view)
         await view.wait()
@@ -149,8 +149,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         
         view = RestorePreviewButton(message)
         view.timeout = 10
-
-        await asyncio.sleep(0.20)
+        
         attachments = []
         raw_links = []
         for c in chunks:
@@ -172,11 +171,10 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
                 continue
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
         if attachments:
+            await message.edit(suppress=True)
             if raw_links:
-                await message.edit(suppress=True)
                 rep = await message.reply('\n'.join(raw_links), mention_author=False, files=attachments, view=view)
             else:
-                await message.edit(suppress=True)
                 rep = await message.reply(files=attachments, mention_author=False, view=view)
             await view.wait()
             if view.value:
