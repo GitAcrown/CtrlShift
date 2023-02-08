@@ -171,8 +171,8 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
                 continue
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
         rep = None
+        await message.edit(suppress=True)
         if attachments:
-            await message.edit(suppress=True)
             if raw_links:
                 rep = await message.reply('\n'.join(raw_links), mention_author=False, files=attachments, view=view)
             else:
