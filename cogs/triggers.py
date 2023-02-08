@@ -181,7 +181,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
                 await message.edit(suppress=False)
             await rep.edit(view=None)
         elif raw_links:
-            return await message.reply('\n'.join(raw_links), mention_author=False, view=view)
+            return await message.reply('\n'.join(raw_links), mention_author=False)
         
     # COMMANDES
     
