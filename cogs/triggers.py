@@ -126,7 +126,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         view = RemoveFxButton(message)
         view.timeout = 10
         
-        await asyncio.sleep(0.10)
+        await asyncio.sleep(0.20)
         await message.edit(suppress=True)
         rep = await message.reply('\n'.join(chunks), mention_author=False, view=view)
         await view.wait()
@@ -150,7 +150,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         view = RestorePreviewButton(message)
         view.timeout = 10
 
-        await asyncio.sleep(0.10)
+        await asyncio.sleep(0.20)
         attachments = []
         raw_links = []
         for c in chunks:
