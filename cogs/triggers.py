@@ -20,11 +20,42 @@ DEFAULT_SETTINGS : List[Tuple[str, Any]] = [
     ('TikTokPreview', 1)
 ]
 
+class RestorePreviewButton(discord.ui.View):
+    def __init__(self, message: discord.Message):
+        super().__init__()
+        self.message = message
+        self.value : bool = False
+
+    @discord.ui.button(label='Rétablir les previews', style=discord.ButtonStyle.gray)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.value = True
+        self.stop()
+        
+    async def interaction_check(self, interaction: discord.Interaction):
+        return interaction.user.id == self.message.author.id
+    
+class DeletePreviewButton(discord.ui.View):
+    def __init__(self, message: discord.Message):
+        super().__init__()
+        self.message = message
+        self.value : bool = False
+
+    @discord.ui.button(label='Annuler les previews', style=discord.ButtonStyle.red)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.value = True
+        self.stop()
+        
+    async def interaction_check(self, interaction: discord.Interaction):
+        return interaction.user.id == self.message.author.id
+    
+
 class Triggers(commands.GroupCog, group_name="trig", description="Collection de triggers utiles"):
     """Collection de triggers utiles"""
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.session = requests.Session()
+        
+        self.preview_emoji = self.bot.get_emoji(1072957045407494294)
         
     def cog_unload(self) -> None:
         self.session.close()
@@ -91,9 +122,19 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             chunks.append(f"https://fxtwitter.com/{r}")
         if len(result) == 0:
             return
-        await asyncio.sleep(0.25)
+        
+        view = DeletePreviewButton(message)
+        view.timeout = 10
+        
+        await asyncio.sleep(0.10)
         await message.edit(suppress=True)
-        await message.reply('\n'.join(chunks), mention_author=False)
+        rep = await message.reply('\n'.join(chunks), mention_author=False, view=view)
+        await view.wait()
+        if view.value:
+            await message.edit(suppress=False)
+            await rep.delete()
+        else:
+            await rep.edit(view=None)
         
     async def preview_tiktok(self, message: discord.Message):
         settings = self.get_guild_settings(message.guild)
@@ -104,8 +145,12 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         for r in result:
             chunks.append(f"https://tiktok.sauce.sh/?url={r}")
         if len(chunks) == 0:
-            return
-        await message.edit(suppress=True)
+            return    
+        
+        view = RestorePreviewButton(message)
+        view.timeout = 10
+
+        await asyncio.sleep(0.10)
         attachments = []
         raw_links = []
         for c in chunks:
@@ -128,10 +173,17 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
         if attachments:
             if raw_links:
-                return await message.reply('\n'.join(raw_links), mention_author=False, files=attachments)
-            return await message.reply(files=attachments, mention_author=False)
+                await message.edit(suppress=True)
+                rep = await message.reply('\n'.join(raw_links), mention_author=False, files=attachments, view=view)
+            else:
+                await message.edit(suppress=True)
+                rep = await message.reply(files=attachments, mention_author=False, view=view)
+            await view.wait()
+            if view.value:
+                await message.edit(suppress=False)
+            await rep.edit(view=None)
         elif raw_links:
-            return await message.reply('\n'.join(raw_links), mention_author=False)
+            return await message.reply('\n'.join(raw_links), mention_author=False, view=view)
         
     # COMMANDES
     
