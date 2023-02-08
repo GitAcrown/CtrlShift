@@ -26,7 +26,7 @@ class RestorePreviewButton(discord.ui.View):
         self.message = message
         self.value : bool = False
 
-    @discord.ui.button(label="Rétablir les previews Discord", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="Rétablir les previews", style=discord.ButtonStyle.blurple)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         self.stop()
@@ -40,7 +40,7 @@ class RemoveFxButton(discord.ui.View):
         self.message = message
         self.value : bool = False
 
-    @discord.ui.button(label='Annuler la preview fxtwitter', style=discord.ButtonStyle.red)
+    @discord.ui.button(label='Annuler FxTwitter', style=discord.ButtonStyle.red)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = True
         self.stop()
