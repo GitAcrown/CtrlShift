@@ -19,6 +19,7 @@ logger = logging.getLogger('nero.Quotes')
 FONTS = [
     'Roboto-Regular.ttf',
     'BebasNeue-Regular.ttf',
+    'BebasNeueEmoji.ttf'
     'Minecraftia-Regular.ttf',
     'coolvetica rg.otf',
     'OldLondon.ttf',
@@ -26,6 +27,7 @@ FONTS = [
 FONT_CHOICES = [
     Choice(name="Roboto", value="Roboto-Regular.ttf"),
     Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf"),
+    Choice(name="Bebas Neue (avec Emojis)", value="BebasNeueEmoji.ttf"),
     Choice(name="Minecraftia", value="Minecraftia-Regular.ttf"),
     Choice(name="Coolvetica", value="coolvetica rg.otf"),
     Choice(name="Old London", value="OldLondon.ttf"),
@@ -219,8 +221,10 @@ class Quotes(commands.Cog):
             return await interaction.response.send_message("Impossible de trouver le message demandé.", ephemeral=True)
         except discord.HTTPException:
             return await interaction.response.send_message("Une erreur est survenue.", ephemeral=True)
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Message original", style=discord.ButtonStyle.secondary, url=message.jump_url))
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, font))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, font), view=view)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
         
@@ -293,12 +297,12 @@ class Quotes(commands.Cog):
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
         """Menu contextuel permettant de transformer un message en citation imagée"""
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeue-Regular.ttf'))
+            view = discord.ui.View()
+            view.add_item(discord.ui.Button(label="Message original", style=discord.ButtonStyle.secondary, url=message.jump_url))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeueEmoji.ttf'), view=view)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
-        
-    async def cog_unload(self) -> None:
-        self.session.close()
+
         
 async def setup(bot):
     await bot.add_cog(Quotes(bot))
