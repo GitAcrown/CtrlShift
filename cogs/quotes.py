@@ -19,7 +19,7 @@ logger = logging.getLogger('nero.Quotes')
 FONTS = [
     'Roboto-Regular.ttf',
     'BebasNeue-Regular.ttf',
-    'BebasNeueEmoji.ttf'
+    'NotoBebasNeue.ttf'
     'Minecraftia-Regular.ttf',
     'coolvetica rg.otf',
     'OldLondon.ttf',
@@ -27,7 +27,7 @@ FONTS = [
 FONT_CHOICES = [
     Choice(name="Roboto", value="Roboto-Regular.ttf"),
     Choice(name="Bebas Neue", value="BebasNeue-Regular.ttf"),
-    Choice(name="Bebas Neue (avec Emojis)", value="BebasNeueEmoji.ttf"),
+    Choice(name="Bebas Neue (avec Emojis)", value="NotoBebasNeue.ttf"),
     Choice(name="Minecraftia", value="Minecraftia-Regular.ttf"),
     Choice(name="Coolvetica", value="coolvetica rg.otf"),
     Choice(name="Old London", value="OldLondon.ttf"),
@@ -298,8 +298,8 @@ class Quotes(commands.Cog):
         """Menu contextuel permettant de transformer un message en citation imagée"""
         try:
             view = discord.ui.View()
-            view.add_item(discord.ui.Button(label="Message original", style=discord.ButtonStyle.secondary, url=message.jump_url))
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='BebasNeueEmoji.ttf'), view=view)
+            view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.secondary, url=message.jump_url))
+            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='NotoBebasNeue.ttf'), view=view)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
 
