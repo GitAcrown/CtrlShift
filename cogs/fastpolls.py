@@ -52,7 +52,7 @@ class FastPolls(commands.Cog):
         for choice, votes in data['votes'].items():
             chunks.append((choice.capitalize(), pretty.bar_chart(votes, total_votes, 5 if total_votes < 10 else 10) + f" [{votes}]"))
         timestamp = datetime.utcnow().fromtimestamp(time.time() + data['timeout']) if ending is False else datetime.utcnow().fromtimestamp(time.time())
-        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=datetime.utcnow().fromtimestamp(time.time() + data['timeout']))
+        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=timestamp)
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
     
