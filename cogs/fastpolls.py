@@ -1,15 +1,15 @@
-import discord
 import logging
 import time
-import re
-from tabulate import tabulate
-from discord import app_commands
-from discord.ext import commands, tasks
-from typing import Optional, Any
-from common.dataio import get_sqlite_database
-from common.utils import fuzzy, pretty
 from copy import copy
-from typing import List
+from datetime import datetime
+from typing import Any, List
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+from tabulate import tabulate
+
+from common.utils import pretty
 
 logger = logging.getLogger('nero.FastPolls')
 
@@ -50,8 +50,8 @@ class FastPolls(commands.Cog):
         chunks = []
         total_votes = sum(data['votes'].values())
         for choice, votes in data['votes'].items():
-            chunks.append((choice.capitalize(), pretty.bar_chart(votes, total_votes, 5 if total_votes < 10 else 10) + f"({votes})"))
-        embed = discord.Embed(title=title, description=f"```fix\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136)
+            chunks.append((choice.capitalize(), pretty.bar_chart(votes, total_votes, 5 if total_votes < 10 else 10) + f" [{votes}]"))
+        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=datetime.utcnow().fromtimestamp(data['timeout']))
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
     
@@ -75,7 +75,8 @@ class FastPolls(commands.Cog):
             'choices': [choice.strip() for choice in choices.split(',')],
             'votes': {choice.strip(): 0 for choice in choices.split(',')},
             'author': interaction.user,
-            'vote_message': None
+            'vote_message': None,
+            'timeout': time.time() + timeout * 60
         }
         embed = self.get_embed(self.sessions[channel.id])
         view = discord.ui.View()
