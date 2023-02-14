@@ -45,12 +45,13 @@ class FastPolls(commands.Cog):
         self.bot = bot
         self.sessions = {}
         
-    def get_embed(self, data: dict):
+    def get_embed(self, data: dict, ending: bool = False):
         title = f"***{data['title']}***"
         chunks = []
         total_votes = sum(data['votes'].values())
         for choice, votes in data['votes'].items():
             chunks.append((choice.capitalize(), pretty.bar_chart(votes, total_votes, 5 if total_votes < 10 else 10) + f" [{votes}]"))
+        timestamp = datetime.utcnow().fromtimestamp(time.time() + data['timeout']) if ending is False else datetime.utcnow().fromtimestamp(time.time())
         embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=datetime.utcnow().fromtimestamp(time.time() + data['timeout']))
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
@@ -88,7 +89,7 @@ class FastPolls(commands.Cog):
         await interaction.response.send_message("**Nouveau sondage créé** · Vous pouvez voter en cliquant sur le menu déroulant ci-dessus !", ephemeral=True)
         await view.wait()
         await msg.edit(view=None)
-        final_embed = self.get_embed(self.sessions[channel.id])
+        final_embed = self.get_embed(self.sessions[channel.id], ending=True)
         await channel.send(embed=final_embed, content="**Sondage terminé** · Merci d'avoir participé !")
         del self.sessions[channel.id]
         
