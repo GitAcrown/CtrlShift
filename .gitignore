@@ -132,5 +132,4 @@ dmypy.json
 .vscode/
 
 database/*/
-cogs/insights.py/
-cogs/maker.py/
+hidden_cogs/
