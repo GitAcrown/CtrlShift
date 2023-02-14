@@ -51,18 +51,18 @@ class FastPolls(commands.Cog):
         total_votes = sum(data['votes'].values())
         for choice, votes in data['votes'].items():
             chunks.append((choice.capitalize(), pretty.bar_chart(votes, total_votes, 5 if total_votes < 10 else 10) + f" [{votes}]"))
-        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=datetime.utcnow().fromtimestamp(data['timeout']))
+        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=datetime.utcnow().fromtimestamp(time.time() + data['timeout']))
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
     
     @app_commands.command(name="poll")
     @app_commands.guild_only()
-    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, timeout: app_commands.Range[int, 1, 60] = 5):
+    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, timeout: app_commands.Range[int, 30, 600] = 60):
         """Créer un sondage rapide
 
         :param title: Titre du sondage
         :param choices: Choix séparés par des virgules (X,Y,Z...)
-        :param timeout: Temps en minutes avant expiration du sondage (par défaut 5m, max. 60m)
+        :param timeout: Temps après la dernière réponse avant la fin du sondage (en secondes), par défaut 60s
         """
         channel = interaction.channel
         if not isinstance(channel, discord.TextChannel):
@@ -76,12 +76,13 @@ class FastPolls(commands.Cog):
             'votes': {choice.strip(): 0 for choice in choices.split(',')},
             'author': interaction.user,
             'vote_message': None,
-            'timeout': time.time() + timeout * 60
+            'timeout': timeout
         }
         embed = self.get_embed(self.sessions[channel.id])
         view = discord.ui.View()
         view.add_item(PollSelect(self, self.sessions[channel.id]))
-        view.timeout = timeout * 60
+        view.timeout = timeout
+        print(view.timeout)
         msg : discord.Message = await channel.send(embed=embed, view=view)
         self.sessions[channel.id]['vote_message'] = msg
         await interaction.response.send_message("**Nouveau sondage créé** · Vous pouvez voter en cliquant sur le menu déroulant ci-dessus !", ephemeral=True)
