@@ -15,8 +15,14 @@ logger = logging.getLogger('nero.FastPolls')
 
 class PollSelect(discord.ui.Select):
     def __init__(self, cog: 'FastPolls', poll_session: dict, minimum: int = 1, maximum: int = 1):
+        pholder = "Sélectionnez une option"
+        if maximum > 1:
+            pholder = f"Sélectionnez ({minimum}-{maximum}) options"
+        if minimum == maximum:
+            pholder = f"Sélectionnez {minimum} option{'s' if maximum > 1 else ''}"
+            
         super().__init__(
-            placeholder="Sélectionnez une option" if maximum == 1 else f"Sélectionnez ({minimum}-{maximum}) options",
+            placeholder=pholder,
             min_values=minimum,
             max_values=maximum,
             row=0
