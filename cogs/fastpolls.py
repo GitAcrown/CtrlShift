@@ -62,7 +62,7 @@ class FastPolls(commands.Cog):
         chunks.append(('Total', total_votes, f"{'(Choix multiples autorisés)' if data['maximum'] > 1 else ''}"))
         
         timestamp = datetime.utcnow().fromtimestamp(time.time() + data['timeout']) if ending is False else datetime.utcnow().fromtimestamp(time.time())
-        embed = discord.Embed(title=title, description=f"```fix\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=timestamp)
+        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=timestamp)
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
     
