@@ -67,7 +67,7 @@ class FastPolls(commands.Cog):
     
     @app_commands.command(name="poll")
     @app_commands.guild_only()
-    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, multiple_choices: Optional[int] = 1, timeout: app_commands.Range[int, 60, 600] = 90):
+    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, multiple_choices: int = 1, timeout: app_commands.Range[int, 60, 600] = 90):
         """Créer un sondage rapide
 
         :param title: Titre du sondage
@@ -96,7 +96,7 @@ class FastPolls(commands.Cog):
         }
         embed = self.get_embed(self.sessions[channel.id])
         view = discord.ui.View()
-        view.add_item(PollSelect(self, self.sessions[channel.id]))
+        view.add_item(PollSelect(self, self.sessions[channel.id], multiple_choices=multiple_choices))
         view.timeout = timeout
         msg : discord.Message = await channel.send(embed=embed, view=view)
         self.sessions[channel.id]['vote_message'] = msg
