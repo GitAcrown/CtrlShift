@@ -82,6 +82,9 @@ class FastPolls(commands.Cog):
             return await interaction.response.send_message("**Sondage déjà en cours** · Attendez que le sondage en cours sur ce salon se termine avant d'en lancer un nouveau !", ephemeral=True)
         if len(choices.split(',')) < 2:
             return await interaction.response.send_message("**Sondage invalide** · Vous devez fournir au moins deux choix séparés par des virgules !", ephemeral=True)
+        if multiple_choices < 1 or multiple_choices >= len(choices.split(',')):
+            return await interaction.response.send_message("**Sondage invalide** · La valeur de `multiple_choices` doit être au moins égale à 1 et doit être inférieure au nombre d'options disponibles !", ephemeral=True)
+        
         self.sessions[channel.id] = {
             'title': title,
             'choices': [choice.strip() for choice in choices.split(',')],
