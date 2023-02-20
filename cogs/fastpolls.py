@@ -2,7 +2,7 @@ import logging
 import time
 from copy import copy
 from datetime import datetime
-from typing import Any, List
+from typing import Any, List, Optional
 
 import discord
 from discord import app_commands
@@ -14,11 +14,11 @@ from common.utils import pretty
 logger = logging.getLogger('nero.FastPolls')
 
 class PollSelect(discord.ui.Select):
-    def __init__(self, cog: 'FastPolls', poll_session: dict):
+    def __init__(self, cog: 'FastPolls', poll_session: dict, multiple_choices: int = 1):
         super().__init__(
-            placeholder='Sélectionnez une option',
-            min_values=1,
-            max_values=1,
+            placeholder="Sélectionnez une option" if multiple_choices == 1 else f"Sélectionnez {multiple_choices} options",
+            min_values=multiple_choices,
+            max_values=multiple_choices,
             row=0
         )
         self._cog = cog
@@ -35,11 +35,15 @@ class PollSelect(discord.ui.Select):
             if interaction.user.id in self.session['votes'][v]:
                 self.session['votes'][v].remove(interaction.user.id)
                 edited = True
-        self.session['votes'][self.values[0]].append(interaction.user.id)
+                
+        for v in self.values:
+            if interaction.user.id not in self.session['votes'][v]:
+                self.session['votes'][v].append(interaction.user.id)
+        
         self.session['vote_message'] = await self.session['vote_message'].edit(embed=self._cog.get_embed(self.session))
         if edited:
-            return await interaction.response.send_message(f"**`{self.session['title']}` ·** __Vote modifié__, merci d'avoir participé !", ephemeral=True)
-        return await interaction.response.send_message(f"**`{self.session['title']}` ·** __Vote pris en compte__, merci d'avoir participé !", ephemeral=True)
+            return await interaction.response.send_message(f"**`{self.session['title']}` ·** __Vote modifié__, merci d'avoir participé !", ephemeral=True, delete_after=10)
+        return await interaction.response.send_message(f"**`{self.session['title']}` ·** __Vote pris en compte__, merci d'avoir participé !", ephemeral=True, delete_after=10)
 
         
 class FastPolls(commands.Cog):
@@ -54,20 +58,22 @@ class FastPolls(commands.Cog):
         chunks = []  
         total_votes = sum([len(data['votes'][v]) for v in data['votes']])
         for choice, votes in data['votes'].items():
-            chunks.append((choice.capitalize(), pretty.bar_chart(len(votes), total_votes, 5 if total_votes < 10 else 10), len(votes)))
+            chunks.append((choice.capitalize(), len(votes), pretty.bar_chart(len(votes), total_votes, 5 if total_votes < 10 else 10)))
+        chunks.append(('Total', total_votes, f"{'(Multiple)' if data['multiple_choices'] > 1 else '(Unique)'}"))
         timestamp = datetime.utcnow().fromtimestamp(time.time() + data['timeout']) if ending is False else datetime.utcnow().fromtimestamp(time.time())
-        embed = discord.Embed(title=title, description=f"```css\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=timestamp)
+        embed = discord.Embed(title=title, description=f"```fix\n{tabulate(chunks, tablefmt='plain')}```", color=0x2F3136, timestamp=timestamp)
         embed.set_footer(text="Sondage créé par " + data['author'].display_name, icon_url=data['author'].display_avatar.url)
         return embed
     
     @app_commands.command(name="poll")
     @app_commands.guild_only()
-    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, timeout: app_commands.Range[int, 60, 600] = 90):
+    async def create_poll(self, interaction: discord.Interaction, title: str, choices: str, multiple_choices: Optional[int] = 1, timeout: app_commands.Range[int, 60, 600] = 90):
         """Créer un sondage rapide
 
         :param title: Titre du sondage
-        :param choices: Choix séparés par des virgules (X,Y,Z...)
-        :param timeout: Temps en secondes d'expiration après la dernière réponse reçue, par défaut 90s
+        :param choices: Choix possibles, séparés par des virgules
+        :param multiple_choices: Nombre de choix qu'il faut sélectionner, par défaut 1
+        :param timeout: Temps d'expiration du sondage en secondes à partir de la dernière réponse, par défaut 90s
         """
         channel = interaction.channel
         if not isinstance(channel, discord.TextChannel):
@@ -82,7 +88,8 @@ class FastPolls(commands.Cog):
             'votes': {choice.strip(): [] for choice in choices.split(',')},
             'author': interaction.user,
             'vote_message': None,
-            'timeout': timeout
+            'timeout': timeout,
+            'multiple_choices': multiple_choices,
         }
         embed = self.get_embed(self.sessions[channel.id])
         view = discord.ui.View()
@@ -90,7 +97,7 @@ class FastPolls(commands.Cog):
         view.timeout = timeout
         msg : discord.Message = await channel.send(embed=embed, view=view)
         self.sessions[channel.id]['vote_message'] = msg
-        await interaction.response.send_message("**Nouveau sondage créé avec succès** · Vous pouvez voter en cliquant sur le menu déroulant ci-dessous !", ephemeral=True)
+        await interaction.response.send_message("**Nouveau sondage créé avec succès** · Vous pouvez voter en cliquant sur le menu déroulant ci-dessous !", ephemeral=True, delete_after=20)
         await view.wait()
         await msg.edit(view=None)
         final_embed = self.get_embed(self.sessions[channel.id], ending=True)
