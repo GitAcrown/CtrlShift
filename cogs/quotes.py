@@ -35,15 +35,15 @@ FONT_CHOICES = [
 
 
 class QuoteView(discord.ui.View):
+    
     def __init__(self, cog: 'Quotes', quote_url: str, interaction: discord.Interaction):
         super().__init__(timeout=600)
         self._cog = cog
         self.quote_url = quote_url
         self.interaction = interaction
+    
         
-        self.save_quote.emoji = self._cog.bookmark_emoji
-        
-    @discord.ui.button(label='', style=discord.ButtonStyle.success)
+    @discord.ui.button(emoji='<:iconBookmark:1077959551669776384>', style=discord.ButtonStyle.success)
     async def save_quote(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Sauvegarder la citation"""
         db = get_tinydb_database('quotes')
