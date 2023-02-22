@@ -41,7 +41,9 @@ class QuoteView(discord.ui.View):
         self.quote_url = quote_url
         self.interaction = interaction
         
-    @discord.ui.button(label="Sauvegarder", style=discord.ButtonStyle.success)
+        self.save_quote.emoji = self._cog.bookmark_emoji
+        
+    @discord.ui.button(style=discord.ButtonStyle.success)
     async def save_quote(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Sauvegarder la citation"""
         db = get_tinydb_database('quotes')
@@ -172,6 +174,8 @@ class Quotes(commands.Cog):
             callback=self.ctx_quotify_message
         )
         self.bot.tree.add_command(self.context_menu)
+        
+        self.bookmark_emoji = self.bot.get_emoji(1077959551669776384)
     
     def quote_cooldown(interaction: discord.Interaction):
         if interaction.user.id == 172376505354158080:
