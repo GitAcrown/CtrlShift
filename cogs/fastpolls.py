@@ -17,7 +17,7 @@ class PollSelect(discord.ui.Select):
     def __init__(self, cog: 'FastPolls', poll_session: dict, minimum: int = 1, maximum: int = 1):
         pholder = "Sélectionnez une option"
         if maximum > 1:
-            pholder = f"Sélectionnez ({minimum}-{maximum}) options"
+            pholder = f"Sélectionnez de {minimum} à {maximum} options"
         if minimum == maximum:
             pholder = f"Sélectionnez {minimum} option{'s' if maximum > 1 else ''}"
             
