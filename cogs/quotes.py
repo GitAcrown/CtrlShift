@@ -43,7 +43,7 @@ class QuoteView(discord.ui.View):
         
         self.save_quote.emoji = self._cog.bookmark_emoji
         
-    @discord.ui.button(style=discord.ButtonStyle.success)
+    @discord.ui.button(label='', style=discord.ButtonStyle.success)
     async def save_quote(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Sauvegarder la citation"""
         db = get_tinydb_database('quotes')
