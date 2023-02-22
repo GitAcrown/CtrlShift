@@ -14,7 +14,7 @@ from tinydb import Query
 
 from common.dataio import get_package_path, get_tinydb_database
 
-logger = logging.getLogger('nero.Quotes')
+logger = logging.getLogger('ctrlshift.Quotes')
 
 FONTS = [
     'Roboto-Regular.ttf',

@@ -13,7 +13,7 @@ from discord.ext import commands
 from common.dataio import get_sqlite_database
 from common.utils import fuzzy
 
-logger = logging.getLogger('nero.Triggers')
+logger = logging.getLogger('ctrlshift.Triggers')
 
 DEFAULT_SETTINGS : List[Tuple[str, Any]] = [
     ('fxTwitter', 1),

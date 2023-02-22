@@ -11,7 +11,7 @@ from tabulate import tabulate
 
 from common.utils import pretty
 
-logger = logging.getLogger('nero.FastPolls')
+logger = logging.getLogger('ctrlshift.FastPolls')
 
 class PollSelect(discord.ui.Select):
     def __init__(self, cog: 'FastPolls', poll_session: dict, minimum: int = 1, maximum: int = 1):

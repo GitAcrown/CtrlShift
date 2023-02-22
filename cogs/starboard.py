@@ -17,7 +17,7 @@ from tabulate import tabulate
 from common.dataio import get_sqlite_database
 from common.utils import fuzzy, pretty
 
-logger = logging.getLogger('nero.Starboard')
+logger = logging.getLogger('ctrlshift.Starboard')
 
 DEFAULT_SETTINGS = [
     ('PostChannelID', 0),

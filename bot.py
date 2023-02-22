@@ -12,7 +12,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s (%(name)s %(module)s) %(message)s",
 )
-logger = logging.getLogger('nero.Main')
+logger = logging.getLogger('ctrlshift.Main')
 
 intents = discord.Intents.default()
 intents.message_content = True

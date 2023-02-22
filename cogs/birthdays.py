@@ -10,7 +10,7 @@ import json
 
 from common.dataio import get_sqlite_database
 
-logger = logging.getLogger('nero.Birthdays')
+logger = logging.getLogger('ctrlshift.Birthdays')
 
 DEFAULT_SETTINGS = [
     ('BirthdayRoleID', 0),
