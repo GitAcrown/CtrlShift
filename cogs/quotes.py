@@ -3,7 +3,7 @@ import logging
 import random
 import sqlite3
 from io import BytesIO
-from typing import Optional
+from typing import Optional, Union
 
 import aiohttp
 import discord
@@ -167,14 +167,14 @@ class MyQuotesView(discord.ui.View):
     
         
 class QuotifyHistoryView(discord.ui.View):
-    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, *, timeout: Optional[float] = 90):
+    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member], *, timeout: Optional[float] = 90):
         super().__init__(timeout=timeout)
         self._cog = cog
         self.original_interaction = interaction
         self.message : discord.InteractionMessage = None
         
         self.current_quote_index : int = 0
-        self.quotes : list = self.__get_quotes()
+        self.quotes : list = self.__get_quotes(only_user)
     
         if self.quotes:
             self.previous.disabled = self.current_quote_index < 1
@@ -208,8 +208,8 @@ class QuotifyHistoryView(discord.ui.View):
         self.nextten.disabled = self.current_quote_index + 10 >= len(self.quotes)
     
         
-    def __get_quotes(self) -> list:
-        return self._cog.get_quote_history(self.original_interaction.guild) #type: ignore
+    def __get_quotes(self, user: Optional[discord.Member] = None) -> list:
+        return self._cog.get_quote_history(self.original_interaction.guild, user) #type: ignore
     
     async def __current_message(self) -> Optional[discord.Message]:
         message_id, channel_id = self.quotes[self.current_quote_index]
@@ -300,25 +300,28 @@ class Quotes(commands.Cog):
         for guild in guilds:
             conn = get_sqlite_database('quotes', 'g' + str(guild.id))
             cursor = conn.cursor()
-            cursor.execute("CREATE TABLE IF NOT EXISTS history (message_id INTEGER PRIMARY KEY, channel_id INTEGER)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS history (message_id INTEGER PRIMARY KEY, channel_id INTEGER, user_id INTEGER)")
             conn.commit()
             cursor.close()
             conn.close()
     
-    def save_quote(self, quote_message: discord.Message):
+    def save_quote(self, quote_message: discord.Message, source_user: Union[discord.User, discord.Member]):
         guild = quote_message.guild
         
         conn = get_sqlite_database('quotes', 'g' + str(guild.id))
         cursor = conn.cursor()
-        cursor.execute("INSERT OR REPLACE INTO history VALUES (?, ?)", (quote_message.id, quote_message.channel.id))
+        cursor.execute("INSERT OR REPLACE INTO history VALUES (?, ?, ?)", (quote_message.id, quote_message.channel.id, source_user.id))
         conn.commit()
         cursor.close()
         conn.close()
     
-    def get_quote_history(self, guild: discord.Guild):
+    def get_quote_history(self, guild: discord.Guild, source_user: Optional[discord.User] = None):
         conn = get_sqlite_database('quotes', 'g' + str(guild.id))
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM history")
+        if source_user:
+            cursor.execute("SELECT message_id, channel_id FROM history WHERE user_id = ?", (source_user.id,))
+        else:
+            cursor.execute("SELECT message_id, channel_id FROM history")
         result = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -380,7 +383,7 @@ class Quotes(commands.Cog):
             await interaction.response.send_message(file=await self.quotify_message_img(message, font), view=view)
             message = await interaction.original_response()
             if message:
-                self.save_quote(message)
+                self.save_quote(message, message.author)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
         
@@ -458,14 +461,14 @@ class Quotes(commands.Cog):
             await interaction.response.send_message(file=await self.quotify_message_img(message, fontname='NotoBebasNeue.ttf'), view=view)
             message = await interaction.original_response()
             if message:
-                self.save_quote(message)
+                self.save_quote(message, message.author)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             
     @app_commands.command(name='qhistory')
-    async def quotify_history(self, interaction: discord.Interaction):
+    async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
         """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne"""
-        await QuotifyHistoryView(self, interaction).start()
+        await QuotifyHistoryView(self, interaction, user).start()
 
         
 async def setup(bot):
