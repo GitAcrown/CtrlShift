@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import random
+import sqlite3
 from io import BytesIO
 from typing import Optional
 
@@ -12,7 +13,7 @@ from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 from tinydb import Query
 
-from common.dataio import get_package_path, get_tinydb_database
+from common.dataio import get_package_path, get_tinydb_database, get_sqlite_database
 
 logger = logging.getLogger('ctrlshift.Quotes')
 
@@ -33,6 +34,7 @@ FONT_CHOICES = [
     Choice(name="Old London", value="OldLondon.ttf"),
 ]
 
+QUOTIFY_LOGS_STARTDATE = '23/02/2023'
 
 class QuoteView(discord.ui.View):
     
@@ -119,7 +121,7 @@ class MyQuotesView(discord.ui.View):
         self.next.disabled = self.inv_position + 1 >= len(self.inventory)
         await interaction.message.edit(view=self)
         
-    @discord.ui.button(label="Précédent", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji='<:iconLeftArrow:1078124175631339580>', style=discord.ButtonStyle.secondary)
     async def previous(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -127,8 +129,14 @@ class MyQuotesView(discord.ui.View):
         self.inv_position = max(0, self.inv_position - 1)
         await self.buttons_logic(interaction)
         await interaction.response.edit_message(embed=self.embed_quote(self.inv_position))
+    
+    @discord.ui.button(label="Fermer", style=discord.ButtonStyle.primary)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Close"""
+        self.stop()
+        await self.message.delete()
 
-    @discord.ui.button(label="Suivant", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji='<:iconRightArrow:1078124174352076850>', style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Next button"""
         self.inv_position = min(len(self.inventory) - 1, self.inv_position + 1)
@@ -157,11 +165,110 @@ class MyQuotesView(discord.ui.View):
         await self.buttons_logic(interaction)
         await self.message.edit(embed=self.embed_quote(self.inv_position))
     
-    @discord.ui.button(label="Fermer", style=discord.ButtonStyle.primary)
+        
+class QuotifyHistoryView(discord.ui.View):
+    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, *, timeout: Optional[float] = 90):
+        super().__init__(timeout=timeout)
+        self._cog = cog
+        self.original_interaction = interaction
+        self.message : discord.InteractionMessage = None
+        
+        self.current_quote_index : int = 0
+        self.quotes : list = self.__get_quotes()
+    
+        if self.quotes:
+            self.previous.disabled = self.current_quote_index < 1
+            self.previousten.disabled = self.current_quote_index < 10
+            self.next.disabled = self.current_quote_index + 1 >= len(self.quotes)
+            self.nextten.disabled = self.current_quote_index + 10 >= len(self.quotes)
+        
+    async def start(self):
+        if not self.quotes:
+            return await self.original_interaction.response.send_message("**Historique vide ·** Aucune citation n'a été générée pour le moment.")
+        message = await self.__current_message()
+        await self.original_interaction.response.send_message(embed=self.embed_quote(message), view=self)
+        self.message = await self.original_interaction.original_response()
+        
+    async def on_timeout(self) -> None:
+        await self.message.edit(view=self.clear_items())
+    
+    async def interaction_check(self, interaction: discord.Interaction):
+        is_author = interaction.user.id == self.original_interaction.user.id
+        if not is_author:
+            await interaction.response.send_message(
+                "Seul l'auteur de la commande peut intéragir avec le menu.",
+                ephemeral=True,
+            )
+        return is_author
+    
+    async def button_logic(self):
+        self.previous.disabled = self.current_quote_index < 1
+        self.previousten.disabled = self.current_quote_index < 10
+        self.next.disabled = self.current_quote_index + 1 >= len(self.quotes)
+        self.nextten.disabled = self.current_quote_index + 10 >= len(self.quotes)
+    
+        
+    def __get_quotes(self) -> list:
+        return self._cog.get_quote_history(self.original_interaction.guild) #type: ignore
+    
+    async def __current_message(self) -> Optional[discord.Message]:
+        message_id, channel_id = self.quotes[self.current_quote_index]
+        channel = self._cog.bot.get_channel(channel_id)
+        if isinstance(channel, discord.TextChannel):
+            return await channel.fetch_message(message_id)
+        else:
+            return None
+        
+    def embed_quote(self, message: Optional[discord.Message]):
+        em = discord.Embed(title="**Quotify ·** Historique", color=0x2F3136)
+        if not isinstance(message, discord.Message):
+            em.description = "Cette citation a été supprimée et n'est plus disponible."
+        elif message.attachments:
+            em.description = f"<t:{int(message.created_at.timestamp())}:R> · [Source]({message.jump_url})"
+            quote = message.attachments[0].url
+            em.set_image(url=quote)
+        else:
+            em.description = "L'image de cette citation a été supprimée et n'est plus disponible."
+        em.set_footer(text=f"{self.current_quote_index + 1}/{len(self.quotes)} • Historique depuis le {QUOTIFY_LOGS_STARTDATE}", icon_url=self.original_interaction.user.display_avatar.url)
+        return em
+    
+    @discord.ui.button(emoji='<:iconLeftDoubleA:1078124171088896071>', style=discord.ButtonStyle.secondary, row=1)
+    async def previousten(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Previous button x10"""
+        self.current_quote_index = max(0, self.current_quote_index - 10)
+        new_message = await self.__current_message()
+        await self.button_logic()
+        await interaction.response.edit_message(embed=self.embed_quote(new_message), view=self)
+
+    @discord.ui.button(emoji='<:iconLeftArrow:1078124175631339580>', style=discord.ButtonStyle.blurple, row=1)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Previous button"""
+        self.current_quote_index = max(0, self.current_quote_index - 1)
+        new_message = await self.__current_message()
+        await self.button_logic()
+        await interaction.response.edit_message(embed=self.embed_quote(new_message), view=self)
+        
+    @discord.ui.button(emoji='<:iconClose:1078144818703765554>', style=discord.ButtonStyle.red, row=1)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Close"""
+        """Close button"""
+        await interaction.response.edit_message(embed=self.embed_quote(await self.__current_message()), view=None)
         self.stop()
-        await self.message.delete()
+    
+    @discord.ui.button(emoji='<:iconRightArrow:1078124174352076850>', style=discord.ButtonStyle.blurple, row=1)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Next button"""
+        self.current_quote_index = min(len(self.quotes), self.current_quote_index + 1)
+        new_message = await self.__current_message()
+        await self.button_logic()
+        await interaction.response.edit_message(embed=self.embed_quote(new_message), view=self)
+        
+    @discord.ui.button(emoji='<:iconRightDoubleA:1078124173076992100>', style=discord.ButtonStyle.secondary, row=1)
+    async def nextten(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Next button x10"""
+        self.current_quote_index = min(len(self.quotes), self.current_quote_index + 10)
+        new_message = await self.__current_message()
+        await self.button_logic()
+        await interaction.response.edit_message(embed=self.embed_quote(new_message), view=self)
 
 
 class Quotes(commands.Cog):
@@ -176,11 +283,50 @@ class Quotes(commands.Cog):
         self.bot.tree.add_command(self.context_menu)
         
         self.bookmark_emoji = self.bot.get_emoji(1077959551669776384)
+        
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.__initialize_database()
+    
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild: discord.Guild):
+        self.__initialize_database(guild)
+        
+    def __initialize_database(self, guild: discord.Guild = None):
+        guilds = [guild] if guild else self.bot.guilds
+        for guild in guilds:
+            conn = get_sqlite_database('quotes', 'g' + str(guild.id))
+            cursor = conn.cursor()
+            cursor.execute("CREATE TABLE IF NOT EXISTS history (message_id INTEGER PRIMARY KEY, channel_id INTEGER)")
+            conn.commit()
+            cursor.close()
+            conn.close()
+    
+    def save_quote(self, quote_message: discord.Message):
+        guild = quote_message.guild
+        
+        conn = get_sqlite_database('quotes', 'g' + str(guild.id))
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR REPLACE INTO history VALUES (?, ?)", (quote_message.id, quote_message.channel.id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    
+    def get_quote_history(self, guild: discord.Guild):
+        conn = get_sqlite_database('quotes', 'g' + str(guild.id))
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM history")
+        result = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return result
+    
     
     def quote_cooldown(interaction: discord.Interaction):
         if interaction.user.id == 172376505354158080:
             return None
         return app_commands.Cooldown(1, 600)
+    
         
     @app_commands.command(name='quote')
     @app_commands.checks.dynamic_cooldown(quote_cooldown)
@@ -228,17 +374,20 @@ class Quotes(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Message original", style=discord.ButtonStyle.secondary, url=message.jump_url))
         try:
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, font), view=view)
+            await interaction.response.send_message(file=await self.quotify_message_img(message, font), view=view)
+            message = await interaction.original_response()
+            if message:
+                self.save_quote(message)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
         
-    async def alternate_quotify_message(self, message: discord.Message, fontname: str = None) -> discord.File:
+    async def quotify_message_img(self, message: discord.Message, fontname: str = None) -> discord.File:
         x1 = 512
         y1 = 512
         if not fontname:
             fontname = random.choice(FONTS)
         font = get_package_path('quotes') + f"/{fontname}"
-        sentence = f"“{message.clean_content}”" if fontname in ["BebasNeue-Regular.ttf", "coolvetica rg.otf"] else f"\"{message.clean_content}\""
+        sentence = f"“{message.clean_content}”" if fontname in ["BebasNeue-Regular.ttf", "NotoBebasNeue.ttf", "coolvetica rg.otf"] else f"\"{message.clean_content}\""
         if len(sentence) > 200:
             raise commands.BadArgument("Le message est trop long.")
         author_sentence = f"@{message.author.name}, {message.created_at.year}"
@@ -303,9 +452,17 @@ class Quotes(commands.Cog):
         try:
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.secondary, url=message.jump_url))
-            await interaction.response.send_message(file=await self.alternate_quotify_message(message, fontname='NotoBebasNeue.ttf'), view=view)
+            await interaction.response.send_message(file=await self.quotify_message_img(message, fontname='NotoBebasNeue.ttf'), view=view)
+            message = await interaction.original_response()
+            if message:
+                self.save_quote(message)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
+            
+    @app_commands.command(name='qhistory')
+    async def quotify_history(self, interaction: discord.Interaction):
+        """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne"""
+        await QuotifyHistoryView(self, interaction).start()
 
         
 async def setup(bot):
