@@ -230,9 +230,9 @@ class QuotifyHistoryView(discord.ui.View):
         if self.only_user is not None:
             title += f" `user:{self.only_user.name}`"
         if self.order_desc:
-            title += " `order:Desc.`"
+            title += " `order:Desc`"
         else:
-            title += " `order:Asc.`"
+            title += " `order:Asc`"
         em = discord.Embed(title=title, color=0x2F3136)
         if not isinstance(message, discord.Message):
             em.description = "Cette citation a été supprimée et n'est plus disponible."
