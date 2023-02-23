@@ -14,6 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 from tinydb import Query
 
 from common.dataio import get_package_path, get_tinydb_database, get_sqlite_database
+from common.utils import fuzzy
 
 logger = logging.getLogger('ctrlshift.Quotes')
 
@@ -167,15 +168,16 @@ class MyQuotesView(discord.ui.View):
     
         
 class QuotifyHistoryView(discord.ui.View):
-    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member] = None, *, timeout: Optional[float] = 90):
+    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member] = None, order_desc: bool = True, *, timeout: Optional[float] = 90):
         super().__init__(timeout=timeout)
         self._cog = cog
         self.original_interaction = interaction
         self.only_user = only_user
+        self.order_desc = order_desc
         self.message : discord.InteractionMessage = None
         
         self.current_quote_index : int = 0
-        self.quotes : list = self.__get_quotes(only_user)
+        self.quotes : list = self.__get_quotes(only_user, order_desc)
     
         if self.quotes:
             self.previous.disabled = self.current_quote_index < 1
@@ -209,8 +211,8 @@ class QuotifyHistoryView(discord.ui.View):
         self.nextten.disabled = self.current_quote_index + 10 >= len(self.quotes)
     
         
-    def __get_quotes(self, user: Optional[discord.Member] = None) -> list:
-        return self._cog.get_quote_history(self.original_interaction.guild, user) #type: ignore
+    def __get_quotes(self, user: Optional[discord.Member] = None, order_desc: bool = True) -> list:
+        return self._cog.get_quote_history(self.original_interaction.guild, user, order_desc) #type: ignore
     
     async def __current_message(self) -> Optional[discord.Message]:
         message_id, channel_id = self.quotes[self.current_quote_index]
@@ -224,7 +226,13 @@ class QuotifyHistoryView(discord.ui.View):
         return None
         
     def embed_quote(self, message: Optional[discord.Message]):
-        title = f"**Quotify ·** Historique" if self.only_user is None else f"**Quotify ·** Historique de `{self.only_user.name}`"
+        title = f"**Quotify ·** Historique"
+        if self.only_user is not None:
+            title += f" `user:{self.only_user.name}`"
+        if self.order_desc:
+            title += " `order:desc`"
+        else:
+            title += " `order:asc`"
         em = discord.Embed(title=title, color=0x2F3136)
         if not isinstance(message, discord.Message):
             em.description = "Cette citation a été supprimée et n'est plus disponible."
@@ -317,13 +325,13 @@ class Quotes(commands.Cog):
         cursor.close()
         conn.close()
     
-    def get_quote_history(self, guild: discord.Guild, source_user: Optional[discord.User] = None):
+    def get_quote_history(self, guild: discord.Guild, source_user: Optional[discord.User] = None, order_desc: bool = True):
         conn = get_sqlite_database('quotes', 'g' + str(guild.id))
         cursor = conn.cursor()
         if source_user:
-            cursor.execute("SELECT message_id, channel_id FROM history WHERE user_id = ?", (source_user.id,))
+            cursor.execute("SELECT message_id, channel_id FROM history WHERE user_id = ?{}".format(' ORDER BY message_id DESC' if order_desc else ''), (source_user.id,))
         else:
-            cursor.execute("SELECT message_id, channel_id FROM history")
+            cursor.execute("SELECT message_id, channel_id FROM history{}".format(' ORDER BY message_id DESC' if order_desc else ''))
         result = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -468,11 +476,19 @@ class Quotes(commands.Cog):
             await interaction.response.send_message(str(e), ephemeral=True)
             
     @app_commands.command(name='qhistory')
-    async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+    async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None, order: str = 'desc'):
         """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne
         
-        :param user: Limiter l'historique aux citations quotifiées de l'utilisateur spécifié"""
-        await QuotifyHistoryView(self, interaction, user).start()
+        :param user: Limiter l'historique aux citations quotifiées de l'utilisateur spécifié
+        :param order_up: Inverser l'ordre de l'historique """
+        order_desc = order.lower() == 'desc'
+        await QuotifyHistoryView(self, interaction, user, order_desc).start()
+        
+    @quotify_history.autocomplete('order')
+    async def autocomplete_callback(self, interaction: discord.Interaction, current: str):
+        options = [('Descendant', 'desc'), ('Ascendant', 'asc')]
+        stgs = fuzzy.finder(current, options, key=lambda o: o[1])
+        return [app_commands.Choice(name=f'{s[0]}', value=s[1]) for s in stgs]
 
         
 async def setup(bot):
