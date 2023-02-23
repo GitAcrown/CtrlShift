@@ -215,9 +215,12 @@ class QuotifyHistoryView(discord.ui.View):
         message_id, channel_id = self.quotes[self.current_quote_index]
         channel = self._cog.bot.get_channel(channel_id)
         if isinstance(channel, discord.TextChannel):
-            return await channel.fetch_message(message_id)
-        else:
-            return None
+            try:
+                msg = await channel.fetch_message(message_id)
+                return msg
+            except discord.NotFound:
+                pass
+        return None
         
     def embed_quote(self, message: Optional[discord.Message]):
         em = discord.Embed(title="**Quotify ·** Historique", color=0x2F3136)
