@@ -167,10 +167,11 @@ class MyQuotesView(discord.ui.View):
     
         
 class QuotifyHistoryView(discord.ui.View):
-    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member], *, timeout: Optional[float] = 90):
+    def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member] = None, *, timeout: Optional[float] = 90):
         super().__init__(timeout=timeout)
         self._cog = cog
         self.original_interaction = interaction
+        self.only_user = only_user
         self.message : discord.InteractionMessage = None
         
         self.current_quote_index : int = 0
@@ -223,7 +224,8 @@ class QuotifyHistoryView(discord.ui.View):
         return None
         
     def embed_quote(self, message: Optional[discord.Message]):
-        em = discord.Embed(title="**Quotify ·** Historique", color=0x2F3136)
+        title = f"**Quotify ·** Historique" if self.only_user is None else f"**Quotify ·** Historique de `{self.only_user.name}`"
+        em = discord.Embed(title=title, color=0x2F3136)
         if not isinstance(message, discord.Message):
             em.description = "Cette citation a été supprimée et n'est plus disponible."
         elif message.attachments:
@@ -381,9 +383,9 @@ class Quotes(commands.Cog):
         view.add_item(discord.ui.Button(label="Message original", style=discord.ButtonStyle.secondary, url=message.jump_url))
         try:
             await interaction.response.send_message(file=await self.quotify_message_img(message, font), view=view)
-            message = await interaction.original_response()
-            if message:
-                self.save_quote(message, message.author)
+            intermsg = await interaction.original_response()
+            if intermsg:
+                self.save_quote(intermsg, message.author)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
         
@@ -459,9 +461,9 @@ class Quotes(commands.Cog):
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.secondary, url=message.jump_url))
             await interaction.response.send_message(file=await self.quotify_message_img(message, fontname='NotoBebasNeue.ttf'), view=view)
-            message = await interaction.original_response()
-            if message:
-                self.save_quote(message, message.author)
+            intermsg = await interaction.original_response()
+            if intermsg:
+                self.save_quote(intermsg, message.author)
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             
