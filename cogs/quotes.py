@@ -469,7 +469,9 @@ class Quotes(commands.Cog):
             
     @app_commands.command(name='qhistory')
     async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
-        """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne"""
+        """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne
+        
+        :param user: Limiter l'historique aux citations quotifiées de l'utilisateur spécifié"""
         await QuotifyHistoryView(self, interaction, user).start()
 
         
