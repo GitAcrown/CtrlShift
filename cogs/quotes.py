@@ -230,9 +230,9 @@ class QuotifyHistoryView(discord.ui.View):
         if self.only_user is not None:
             title += f" `user:{self.only_user.name}`"
         if self.order_desc:
-            title += " `order:desc`"
+            title += " `order:Desc.`"
         else:
-            title += " `order:asc`"
+            title += " `order:Asc.`"
         em = discord.Embed(title=title, color=0x2F3136)
         if not isinstance(message, discord.Message):
             em.description = "Cette citation a été supprimée et n'est plus disponible."
@@ -476,11 +476,11 @@ class Quotes(commands.Cog):
             await interaction.response.send_message(str(e), ephemeral=True)
             
     @app_commands.command(name='qhistory')
-    async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None, order: str = 'desc'):
+    async def quotify_history(self, interaction: discord.Interaction, user: Optional[discord.Member] = None, order: Optional[str] = 'desc'):
         """Affiche l'historique des citations quotifiées de la plus récente à la plus ancienne
         
         :param user: Limiter l'historique aux citations quotifiées de l'utilisateur spécifié
-        :param order_up: Inverser l'ordre de l'historique """
+        :param order: Choisir l'ordre d'affichage des citations (Ascendant ou Descendant des identifiants messages)"""
         order_desc = order.lower() == 'desc'
         await QuotifyHistoryView(self, interaction, user, order_desc).start()
         
