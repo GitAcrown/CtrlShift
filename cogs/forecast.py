@@ -226,7 +226,7 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
                     embed.add_field(name=f"• {day}",
                                     value="\n".join(day_txt),
                                     inline=False)
-                embed.set_footer(text="Données de OpenWeatherMap · Dernière mise à jour", icon_url="https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png") 
+                embed.set_footer(text="Données de OpenWeatherMap · Prochaine mise à jour", icon_url="https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png") 
                 await interaction.response.send_message(embed=embed)
             else:
                 await interaction.response.send_message("**Erreur ·** Impossible de récupérer la prévision météo pour cette ville.")
