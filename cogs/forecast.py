@@ -2,7 +2,7 @@ import logging
 import time
 import iso3166
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 import discord
@@ -171,7 +171,7 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
             if forecast:
                 embed = discord.Embed(title=f"**Météo actuelle** · `{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}`", 
                                       color=self.determine_embed_color(forecast['temp']),
-                                      timestamp=forecast['updated'],
+                                      timestamp=forecast['updated'].astimezone(tz=None),
                                       description=f"**{forecast['weather'].capitalize()}**")
                 embed.add_field(name="Température", value=f"__{forecast['temp']}°C__")
                 embed.add_field(name="Ressenti", value=f"{forecast['feels_like']}°C")
@@ -212,13 +212,20 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
             forecast = self.get_week_weather(loc)
             if forecast:
                 embed = discord.Embed(title=f"**Prévisions météo J-5** · `{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}`",
+                                      description="Prévisions météo pour les 5 prochains jours, toutes les 3 heures.",
                                       color=self.determine_embed_color(forecast['list'][0]['temp']),
-                                      timestamp=forecast['updated'])
+                                      timestamp=forecast['updated'].astimezone(tz=None))
+                days = {}
                 for item in forecast['list']:
-                    embed.add_field(name=f"{item['date'].strftime('%A %d %B')}", 
-                                    value=f"**{item['weather'].capitalize()}** · {item['temp']}°C ({item['temp_min']}°C / {item['temp_max']}°C) · {item['humidity']}% 💧",
+                    if item['date'].strftime('%d/%m/%Y') not in days:
+                        days[item['date'].strftime('%d/%m/%Y')] = []
+                    days[item['date'].strftime('%d/%m/%Y')].append(item)
+                
+                for day in days:
+                    day_txt = [f"__{item['date'].strftime('%H')}h__ **{item['weather'].capitalize()}** · {item['temp']}°C ({item['temp_min']}°C / {item['temp_max']}°C) · {item['humidity']}%" for item in days[day]]
+                    embed.add_field(name=f"• {day}",
+                                    value="\n".join(day_txt),
                                     inline=False)
-                embed.set_thumbnail(url=forecast['list'][0]['weather_icon'])
                 embed.set_footer(text="Données de OpenWeatherMap · Dernière mise à jour", icon_url="https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png") 
                 await interaction.response.send_message(embed=embed)
             else:
