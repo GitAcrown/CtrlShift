@@ -116,6 +116,8 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
                     'clouds': data['clouds']['all'], 
                     'weather': data['weather'][0]['description'], 
                     'weather_icon': self.__weather_icon(data['weather'][0]['icon']),
+                    'sunrise': datetime.fromtimestamp(data['sys']['sunrise']),
+                    'sunset': datetime.fromtimestamp(data['sys']['sunset']),
                     'updated': datetime.fromtimestamp(data['dt'])}
         else:
             return None
@@ -151,14 +153,13 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
                                       color=0x2ECC71, 
                                       timestamp=forecast['updated'],
                                       description=f"**{forecast['weather'].capitalize()}**")
-                embed.add_field(name="Température", value=f"**{forecast['temp']}°C**")
+                embed.add_field(name="Température", value=f"__{forecast['temp']}°C__")
                 embed.add_field(name="Ressenti", value=f"{forecast['feels_like']}°C")
-                embed.add_field(name="Température min.", value=f"{forecast['temp_min']}°C")
-                embed.add_field(name="Température max.", value=f"{forecast['temp_max']}°C")
+                embed.add_field(name="Max/Min", value=f"{forecast['temp_max']}°C / {forecast['temp_min']}°C")
                 embed.add_field(name="Humidité", value=f"{forecast['humidity']}%")
                 embed.add_field(name="Pression", value=f"{forecast['pressure']} hPa")
                 embed.add_field(name="Vitesse du vent", value=f"{forecast['wind_speed']} m/s")
-                embed.add_field(name="Direction du vent", value=f"{forecast['wind_deg']}°")
+                embed.add_field(name="Lever et coucher", value=f"{forecast['sunrise'].strftime('%H:%M')} / {forecast['sunset'].strftime('%H:%M')}")
                 embed.add_field(name="Nuages", value=f"{forecast['clouds']}%")
                 embed.set_thumbnail(url=forecast['weather_icon'])
                 embed.set_footer(text="Données fournies par OpenWeatherMap · Dernière mise à jour")
