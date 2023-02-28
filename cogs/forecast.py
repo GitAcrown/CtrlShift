@@ -97,7 +97,7 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
     def __weather_icon(self, icon_id: str):
         return f"https://openweathermap.org/img/wn/{icon_id}@2x.png"
         
-    def get_forecast(self, city: dict) -> Optional[dict]:
+    def get_current_weather(self, city: dict) -> Optional[dict]:
         api_key = self.get_setting('OWMAPIKey')
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={city['lat']}&lon={city['lon']}&appid={api_key}&units=metric&lang=fr"
         response = requests.get(url)
@@ -122,6 +122,26 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
         else:
             return None
         
+    def get_week_weather(self, city: dict) -> Optional[dict]:
+        """Afficher les prévisions pour la semaine"""
+        api_key = self.get_setting('OWMAPIKey')
+        url = f"https://api.openweathermap.org/data/2.5/forecast?lat={city['lat']}&lon={city['lon']}&appid={api_key}&units=metric&lang=fr"
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            return {'name': data['city']['name'],
+                    'country': data['city']['country'],
+                    'list': [{'date': datetime.fromtimestamp(item['dt']),
+                              'temp': item['main']['temp'],
+                              'temp_min': item['main']['temp_min'],
+                              'temp_max': item['main']['temp_max'],
+                              'humidity': item['main']['humidity'],
+                              'weather': item['weather'][0]['description'],
+                              'weather_icon': self.__weather_icon(item['weather'][0]['icon'])} for item in data['list']],
+                    'updated': datetime.fromtimestamp(data['list'][0]['dt'])}
+        else:
+            return None
+        
     def determine_embed_color(self, temp: float) -> int:
         if temp < 0:
             return 0x3498DB
@@ -134,9 +154,9 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
         else:
             return 0xE74C3C
         
-    @app_commands.command(name='today')
-    async def forecast_today(self, interaction: discord.Interaction, city: str, country: Optional[str] = ''):
-        """Afficher la prévision météo pour aujourd'hui
+    @app_commands.command(name='current')
+    async def forecast_current(self, interaction: discord.Interaction, city: str, country: Optional[str] = ''):
+        """Afficher les mesures météo actuelles pour une ville donnée
 
         :param city: Ville concernée
         :param country: Préciser le pays (si nécessaire)
@@ -147,10 +167,10 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
             loc = self.get_geocode(city)
         
         if loc:
-            forecast = self.get_forecast(loc)
+            forecast = self.get_current_weather(loc)
             if forecast:
-                embed = discord.Embed(title=f"Prévision météo pour **{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}**", 
-                                      color=0x2ECC71, 
+                embed = discord.Embed(title=f"**Météo actuelle** · `{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}`", 
+                                      color=self.determine_embed_color(forecast['temp']),
                                       timestamp=forecast['updated'],
                                       description=f"**{forecast['weather'].capitalize()}**")
                 embed.add_field(name="Température", value=f"__{forecast['temp']}°C__")
@@ -162,18 +182,56 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
                 embed.add_field(name="Lever et coucher", value=f"{forecast['sunrise'].strftime('%H:%M')} / {forecast['sunset'].strftime('%H:%M')}")
                 embed.add_field(name="Nuages", value=f"{forecast['clouds']}%")
                 embed.set_thumbnail(url=forecast['weather_icon'])
-                embed.set_footer(text="Données fournies par OpenWeatherMap · Dernière mise à jour")
+                embed.set_footer(text="Données de OpenWeatherMap · Dernière mise à jour", 
+                                 icon_url="https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png")
                 await interaction.response.send_message(embed=embed)
             else:
-                await interaction.response.send_message("**Erreur ·** Impossible de récupérer la prévision météo pour cette ville.")
+                await interaction.response.send_message("**Erreur ·** Impossible de récupérer la météo actuelle pour cette ville.")
         else:
-            await interaction.response.send_message("**Erreur ·** Impossible de récupérer la géolocalisation de cette ville.")
+            await interaction.response.send_message("**Erreur ·** Cette ville n'est pas dans les données d'OpenWeatherMap.\nVérifiez l'orthographe, fournissez le pays ou essayez la grosse ville la plus proche.")
         
-    @forecast_today.autocomplete('country')
+    @forecast_current.autocomplete('country')
     async def forecast_today_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice]:
         all_codes = self.get_all_iso_countries()
         search = fuzzy.finder(current, all_codes, key=lambda t: t[0])
         return [app_commands.Choice(name=name, value=value) for name, value in search][:10]
+    
+    @app_commands.command(name='week')
+    async def forecast_week(self, interaction: discord.Interaction, city: str, country: Optional[str] = ''):
+        """Afficher les prévisions météo pour une semaine pour une ville donnée
+
+        :param city: Ville concernée
+        :param country: Préciser le pays (si nécessaire)
+        """
+        if country:
+            loc = self.get_geocode(city, country)
+        else:
+            loc = self.get_geocode(city)
+        
+        if loc:
+            forecast = self.get_week_weather(loc)
+            if forecast:
+                embed = discord.Embed(title=f"**Prévisions météo J-5** · `{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}`",
+                                      color=self.determine_embed_color(forecast['list'][0]['temp']),
+                                      timestamp=forecast['updated'])
+                for item in forecast['list']:
+                    embed.add_field(name=f"{item['date'].strftime('%A %d %B')}", 
+                                    value=f"**{item['weather'].capitalize()}** · {item['temp']}°C ({item['temp_min']}°C / {item['temp_max']}°C) · {item['humidity']}% 💧",
+                                    inline=False)
+                embed.set_thumbnail(url=forecast['list'][0]['weather_icon'])
+                embed.set_footer(text="Données de OpenWeatherMap · Dernière mise à jour", icon_url="https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png") 
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message("**Erreur ·** Impossible de récupérer la prévision météo pour cette ville.")
+        else:
+            await interaction.response.send_message("**Erreur ·** Cette ville n'est pas dans les données d'OpenWeatherMap.\nVérifiez l'orthographe, fournissez le pays ou essayez la grosse ville la plus proche.")
+        
+    @forecast_week.autocomplete('country')
+    async def forecast_today_autocomplete(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice]:
+        all_codes = self.get_all_iso_countries()
+        search = fuzzy.finder(current, all_codes, key=lambda t: t[0])
+        return [app_commands.Choice(name=name, value=value) for name, value in search][:10]
+    
     
     @commands.command(name='forecastset')
     @commands.is_owner()
