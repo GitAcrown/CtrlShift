@@ -212,7 +212,7 @@ class Forecast(commands.GroupCog, group_name='weather', description='Commandes d
             forecast = self.get_week_weather(loc)
             if forecast:
                 embed = discord.Embed(title=f"**Prévisions météo J-5** · `{forecast['name']}, {self.get_iso_country_by_alpha2(forecast['country']).name}`",
-                                      description="Prévisions météo pour les 5 prochains jours, toutes les 3 heures.",
+                                      description="Prévisions météo pour les 5 prochains jours, toutes les 3 heures.\nLecture · `Heure Météo · Température (Min / Max) · Humidité`",
                                       color=self.determine_embed_color(forecast['list'][0]['temp']),
                                       timestamp=forecast['updated'].astimezone(tz=None))
                 days = {}
