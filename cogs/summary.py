@@ -146,7 +146,7 @@ class Summary(commands.Cog):
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
-        await interaction.edit_original_response(content='', embed=em)
+        await interaction.edit_original_response(content='', embed=em, view=view)
         
         
 async def setup(bot: commands.Bot):
