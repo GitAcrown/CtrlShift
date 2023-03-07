@@ -81,6 +81,7 @@ class Summary(commands.Cog):
         )
         self.bot.tree.add_command(self.context_menu)
         
+    def cog_load(self) -> None:
         if not nltk.data.find('tokenizers/punkt'):
             nltk.download('punkt')
     
