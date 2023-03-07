@@ -114,7 +114,7 @@ class Summary(commands.Cog):
         else:
             return await interaction.response.send_message("Veuillez fournir soit un texte, soit une URL", ephemeral=True)
         resp = '\n'.join(map(str, sentences))
-        desc = f"**Résumé de <{url}>**" + f"\n> *{resp}*" if url else f"**Résumé du texte :**" + f"\n> *{resp}*"
+        desc = f"**Résumé de <{url}>**" + f"\n>>> *{resp}*" if url else f"**Résumé du texte :**" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
         em.set_footer(text=f"{interaction.user}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=em)
@@ -140,7 +140,7 @@ class Summary(commands.Cog):
             return await interaction.response.send_message("Le message ne contient pas d'URL ou de texte suffisamment long pour avoir besoin d'être résumé", ephemeral=True)
 
         resp = '\n'.join(map(str, sentences))
-        desc = f"**Résumé de <{url[0]}>**" + f"\n> *{resp}*" if url else f"**Résumé du texte :**" + f"\n> *{resp}*"
+        desc = f"**Résumé de <{url[0]}>**" + f"\n>>> *{resp}*" if url else f"**Résumé du texte :**" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
         em.set_footer(text=f"{interaction.user}", icon_url=interaction.user.display_avatar.url)
         await interaction.edit_original_response(content='', embed=em)
