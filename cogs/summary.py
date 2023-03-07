@@ -116,7 +116,7 @@ class Summary(commands.Cog):
         resp = '\n'.join(map(str, sentences))
         desc = f"**Résumé de <{url}>**" + f"\n>>> *{resp}*" if url else f"**Résumé du texte :**" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
-        em.set_footer(text=f"{interaction.user}", icon_url=interaction.user.display_avatar.url)
+        em.set_footer(text=f"Langue : {language.capitalize()} | Nombre de phrases : {sentences_count}")
         await interaction.response.send_message(embed=em)
         
     @summarize_command.autocomplete('language')
@@ -142,7 +142,7 @@ class Summary(commands.Cog):
         resp = '\n'.join(map(str, sentences))
         desc = f"**Résumé de <{url[0]}>**" + f"\n>>> *{resp}*" if url else f"**Résumé du texte :**" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
-        em.set_footer(text=f"{interaction.user}", icon_url=interaction.user.display_avatar.url)
+        em.set_footer(text=f"Langue : {lang.capitalize()} | Nombre de phrases : 5")
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
