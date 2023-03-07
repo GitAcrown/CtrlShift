@@ -143,6 +143,9 @@ class Summary(commands.Cog):
         desc = f"**Résumé de <{url[0]}>**" + f"\n>>> *{resp}*" if url else f"**Résumé du texte :**" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
         em.set_footer(text=f"{interaction.user}", icon_url=interaction.user.display_avatar.url)
+        
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
         await interaction.edit_original_response(content='', embed=em)
         
         
