@@ -80,10 +80,6 @@ class Summary(commands.Cog):
             callback=self.ctx_summarize_message
         )
         self.bot.tree.add_command(self.context_menu)
-        
-    def cog_load(self) -> None:
-        if not nltk.data.find('tokenizers/punkt'):
-            nltk.download('punkt')
     
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
         parser = HtmlParser.from_url(url, Tokenizer(language))
@@ -107,6 +103,8 @@ class Summary(commands.Cog):
         :param text: Texte brut à résumer
         :param language: Langue du texte à résumer (french, english, ...)
         :param sentences_count: Nombre de phrases résumées désirées (par défaut 5)"""
+        if not nltk.data.find('tokenizers/punkt'):
+            nltk.download('punkt')
         if url is None and text is None:
             return await interaction.response.send_message("Veuillez fournir soit un texte, soit une URL", ephemeral=True)
         if url is not None:
