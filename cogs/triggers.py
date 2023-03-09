@@ -154,7 +154,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
         raw_links = []
         for c in chunks:
             try:
-                r = self.session.get(c)
+                r = self.session.get(c, timeout=15)
             except Exception as e:
                 logger.warning(f"Error while fetching {c}: {e}", exc_info=True)
                 return await message.reply(f"**Une erreur est survenue lors de la récupération de `{c}`**\nLe site Tiktok.sauce est peut-être hors-ligne.", mention_author=False)
@@ -166,7 +166,7 @@ class Triggers(commands.GroupCog, group_name="trig", description="Collection de 
             else:
                 link_id = c.split('/')[-1]
             size_mb = len(r.content) / (1024 * 1024)
-            if size_mb > 8:
+            if size_mb >= 8:
                 raw_links.append(c)
                 continue
             attachments.append(discord.File(io.BytesIO(r.content), filename=f'{link_id}.mp4'))
