@@ -8,6 +8,7 @@ from discord.ext import commands, tasks
 from typing import Optional, List
 import re
 import json
+import requests
 
 
 from sumy.parsers.html import HtmlParser
@@ -254,15 +255,27 @@ class Summary(commands.Cog):
         for url in urls:
             try:
                 summary = self.summarize_url(url, 'french', 5)
+                summary = '\n'.join(map(str, summary))
             except Exception as e:
                 logger.error(f"Error while summarizing {url}: {e}")
-                continue
-            summary = '\n'.join(map(str, summary))
+                summary = 'Résumé indisponible'
+            
             self.set_url_data(message.guild, url, summary, message)
     
     # Fonctions
     
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
+        # Vérifier que l'URL est valide et que le site contient du texte
+        try:
+            response = requests.get(url, timeout=5)
+        except Exception as e:
+            logger.error(f"Error while fetching {url}: {e}")
+            raise e
+        if response.status_code != 200:
+            raise Exception(f"Error while fetching {url}: {response.status_code}")
+        if not response.text:
+            raise Exception(f"Error while fetching {url}: no text")
+        
         parser = HtmlParser.from_url(url, Tokenizer(language))
         stemmer = Stemmer(language)
         summarizer = Summarizer(stemmer) # type: ignore
