@@ -334,8 +334,11 @@ class Summary(commands.Cog):
         
     async def ctx_summarize_message(self, interaction: discord.Interaction, message: discord.Message):
         """Résume un message depuis un texte ou une URL"""
+        channel = interaction.channel
+        if not isinstance(channel, (discord.TextChannel, discord.DMChannel, discord.GroupChannel, discord.Thread)):
+            return await interaction.response.send_message("Vous devez utiliser cette commande dans un salon de discussion", ephemeral=True)
         view = ChooseLanguageView(self, interaction)
-        await interaction.response.send_message("Indiquez la langue du contenu à résumer :", view=view)
+        await interaction.response.send_message("Indiquez la langue du contenu à résumer :", view=view, ephemeral=True)
         await view.wait()
         lang = view.current_language
         
@@ -357,7 +360,7 @@ class Summary(commands.Cog):
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
-        await interaction.edit_original_response(content='', embed=em, view=view)
+        await channel.send(embed=em, view=view)
         
     @app_commands.command(name="links")
     @app_commands.guild_only()
