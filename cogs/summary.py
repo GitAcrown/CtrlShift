@@ -49,7 +49,10 @@ SUPPORTED_LANGUAGES = [
     ]
 
 SUMMARY_IGNORED_DOMAINS = [
-    'tiktok.com',
+    'tiktok.com'
+]
+
+EMBED_EXTRACTION_DOMAINS = [
     'twitter.com'
 ]
 
@@ -222,8 +225,8 @@ class Summary(commands.Cog):
         conn.close()
         
         data = [dict(d) for d in data]
-        urls = {int(json.loads(d['post_history'])[-1]['timestamp']): d for d in data if d['post_history']}
-        return [urls[t] for t in sorted(urls.keys(), reverse=True)[:count]]
+        urls = [(float(json.loads(d['post_history'])[-1]['timestamp']), d) for d in data if d['post_history']]
+        return [d[1] for d in sorted(urls, key=lambda x: x[0], reverse=True)][:count]
     
     def search_text(self, guild: discord.Guild, text: str) -> list:
         conn = get_sqlite_database('summary', f'g{guild.id}')
@@ -254,19 +257,22 @@ class Summary(commands.Cog):
         urls = re.findall(r'(https?://[^\s]+)', message.clean_content)
         if not urls:
             return
+        print(urls)
         for url in urls:
-            print(url)
             try:
                 summary = self.summarize_url(url, 'french', 5)
+                text = 'Résumé indisponible'
                 if summary:
-                    summary = '\n'.join(map(str, summary))
-                else:
-                    summary = 'Résumé indisponible'
+                    text = '\n'.join(map(str, summary))
+                elif message.embeds:
+                    if urls.index(url) < len(message.embeds):
+                        text = message.embeds[urls.index(url)].description or 'Résumé indisponible'
+                
             except Exception as e:
                 logger.error(f"Error while summarizing {url}: {e}")
-                summary = 'Résumé indisponible'
+                text = 'Résumé indisponible'
             
-            self.set_url_data(message.guild, url, summary, message)
+            self.set_url_data(message.guild, url, text, message)
     
     # Fonctions
     
@@ -377,7 +383,7 @@ class Summary(commands.Cog):
             results = self.search_text(interaction.guild, search.lower()) # type: ignore
             if not results:
                 return await interaction.followup.send("**Aucun résultat ·** Aucune URL ne correspond à votre recherche", ephemeral=True)
-            ordered_results = sorted(results, key=lambda d: int(json.loads(d['post_history'])[-1]['timestamp']), reverse=True)[:20]
+            ordered_results = sorted(results, key=lambda d: float(json.loads(d['post_history'])[-1]['timestamp']), reverse=True)[:20]
         else:
             ordered_results = self.get_last_urls(interaction.guild, 20) # type: ignore
         if not ordered_results:
