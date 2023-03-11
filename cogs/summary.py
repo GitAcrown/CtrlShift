@@ -7,8 +7,8 @@ from discord.app_commands import Choice
 from discord.ext import commands, tasks
 from typing import Optional, List
 import re
-import json
 import requests
+import json
 
 
 from sumy.parsers.html import HtmlParser
@@ -269,11 +269,18 @@ class Summary(commands.Cog):
     
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
         # Vérifier que l'URL est valide et que le site contient du texte
+        with requests.get(url) as r:
+            if r.status_code != 200:
+                raise Exception(f"Error while fetching {url}: {r.status_code}")
+            if not r.text:
+                raise Exception(f"Error while fetching {url}: no text")
+        
+        stemmer = Stemmer(language)
+        summarizer = Summarizer(stemmer) # type: ignore
+        summarizer.stop_words = get_stop_words(language)
+
         try:
             parser = HtmlParser.from_url(url, Tokenizer(language))
-            stemmer = Stemmer(language)
-            summarizer = Summarizer(stemmer) # type: ignore
-            summarizer.stop_words = get_stop_words(language)
             s = summarizer(parser.document, sentences_count)
         except Exception as e:
             logger.error(f"Error while summarizing {url}: {e}")
