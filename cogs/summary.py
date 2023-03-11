@@ -345,8 +345,10 @@ class Summary(commands.Cog):
         url = re.findall(r'(https?://[^\s]+)', message.content)
         if url:
             sentences = self.summarize_url(url[0], lang, 5)
+            title = f"**Résumé de **<{url[0]}>"
         elif len(message.content) > 100:
             sentences = self.summarize_text(message.content, lang, 5)
+            title = f"**Résumé du message**"
         else:
             return await interaction.response.send_message("Le message ne contient pas d'URL ou de texte suffisamment long pour avoir besoin d'être résumé", ephemeral=True)
 
@@ -354,9 +356,10 @@ class Summary(commands.Cog):
             resp = 'Résumé indisponible'
         else:
             resp = '\n'.join(map(str, sentences))
-        desc = f"**Résumé de <{url[0]}>**" + f"\n>>> *{resp}*" if url else f"__**Résumé du texte :**__" + f"\n>>> *{resp}*"
-        em = discord.Embed(description=desc, color=0x2F3136)
+        desc = f">>> *{resp}*"
+        em = discord.Embed(description=desc, color=0x2F3136, title=title)
         em.set_footer(text=f"Langue : {lang.capitalize()} | Nombre de phrases : 5")
+        em.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
         
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
