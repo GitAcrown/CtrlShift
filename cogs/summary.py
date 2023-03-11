@@ -361,6 +361,7 @@ class Summary(commands.Cog):
         view = discord.ui.View()
         view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.gray, url=message.jump_url))
         await channel.send(embed=em, view=view)
+        await interaction.edit_original_response(content="Résumé envoyé dans le salon de discussion", view=None)
         
     @app_commands.command(name="links")
     @app_commands.guild_only()
