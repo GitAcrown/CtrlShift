@@ -267,13 +267,6 @@ class Summary(commands.Cog):
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
         # Vérifier que l'URL est valide et que le site contient du texte
         try:
-            response = requests.get(url, timeout=5)
-        except Exception as e:
-            logger.error(f"Error while fetching {url}: {e}")
-            raise e
-        if response.status_code != 200:
-            raise Exception(f"Error while fetching {url}: {response.status_code}")
-        try:
             parser = HtmlParser.from_url(url, Tokenizer(language))
             if not parser.document.text:
                 raise Exception(f"Error while fetching {url}: no text")
