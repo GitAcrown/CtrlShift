@@ -97,7 +97,7 @@ class URLNavigation(discord.ui.View):
     
     def get_page_embed(self, index: int) -> discord.Embed:
         url_data = self.data[index]
-        summary = f">>> *{url_data['summary']}*"
+        summary = f">>> *{url_data['summary']}*"[:2048]
         first_post = json.loads(url_data['post_history'])[0]
         embed = discord.Embed(title=url_data['url'], description=summary, color=0x2F3136, timestamp=datetime.fromtimestamp(first_post['timestamp']))
         if self.search_term:
@@ -255,7 +255,10 @@ class Summary(commands.Cog):
         for url in urls:
             try:
                 summary = self.summarize_url(url, 'french', 5)
-                summary = '\n'.join(map(str, summary))
+                if summary:
+                    summary = '\n'.join(map(str, summary))
+                else:
+                    summary = 'Résumé indisponible'
             except Exception as e:
                 logger.error(f"Error while summarizing {url}: {e}")
                 summary = 'Résumé indisponible'
@@ -268,8 +271,6 @@ class Summary(commands.Cog):
         # Vérifier que l'URL est valide et que le site contient du texte
         try:
             parser = HtmlParser.from_url(url, Tokenizer(language))
-            if not parser.document.text:
-                raise Exception(f"Error while fetching {url}: no text")
             stemmer = Stemmer(language)
             summarizer = Summarizer(stemmer) # type: ignore
             summarizer.stop_words = get_stop_words(language)
