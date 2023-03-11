@@ -3,11 +3,9 @@ import logging
 from datetime import datetime
 import sqlite3
 from discord import app_commands
-from discord.app_commands import Choice
 from discord.ext import commands, tasks
 from typing import Optional, List
 import re
-import requests
 import json
 
 from sumy.parsers.html import HtmlParser
@@ -257,6 +255,7 @@ class Summary(commands.Cog):
         if not urls:
             return
         for url in urls:
+            print(url)
             try:
                 summary = self.summarize_url(url, 'french', 5)
                 if summary:
@@ -273,14 +272,8 @@ class Summary(commands.Cog):
     
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
         # Vérifier que l'URL est valide et que le site contient du texte
-        with requests.get(url, headers={'Content-Type': 'text'}) as r:
-            if r.status_code != 200:
-                raise Exception(f"Error while fetching {url}: {r.status_code}")
-            if not r.headers['Content-Type'].startswith('text'):
-                raise Exception(f"Error while fetching {url}: not text")
-        
         for i in SUMMARY_IGNORED_DOMAINS:
-            if i in url:
+            if i in url.lower():
                 raise Exception(f"Error while fetching {url}: domain is ignored")
         
         stemmer = Stemmer(language)
