@@ -273,14 +273,13 @@ class Summary(commands.Cog):
             raise e
         if response.status_code != 200:
             raise Exception(f"Error while fetching {url}: {response.status_code}")
-        
-        parser = HtmlParser.from_url(url, Tokenizer(language))
-        if not parser.document.text:
-            raise Exception(f"Error while fetching {url}: no text")
-        stemmer = Stemmer(language)
-        summarizer = Summarizer(stemmer) # type: ignore
-        summarizer.stop_words = get_stop_words(language)
         try:
+            parser = HtmlParser.from_url(url, Tokenizer(language))
+            if not parser.document.text:
+                raise Exception(f"Error while fetching {url}: no text")
+            stemmer = Stemmer(language)
+            summarizer = Summarizer(stemmer) # type: ignore
+            summarizer.stop_words = get_stop_words(language)
             s = summarizer(parser.document, sentences_count)
         except Exception as e:
             logger.error(f"Error while summarizing {url}: {e}")
