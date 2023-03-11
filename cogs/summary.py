@@ -10,7 +10,6 @@ import re
 import requests
 import json
 
-
 from sumy.parsers.html import HtmlParser
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
@@ -50,6 +49,11 @@ SUPPORTED_LANGUAGES = [
     'french',
     'italian'
     ]
+
+SUMMARY_IGNORED_DOMAINS = [
+    'tiktok.com',
+    'twitter.com'
+]
 
 class ChooseLanguageView(discord.ui.View):
     def __init__(self, cog: 'Summary', initial_interaction: discord.Interaction, *, timeout: Optional[float] = 180):
@@ -269,11 +273,15 @@ class Summary(commands.Cog):
     
     def summarize_url(self, url: str, language: str, sentences_count: int = 5):
         # Vérifier que l'URL est valide et que le site contient du texte
-        with requests.get(url) as r:
+        with requests.get(url, headers={'Content-Type': 'text'}) as r:
             if r.status_code != 200:
                 raise Exception(f"Error while fetching {url}: {r.status_code}")
-            if not r.text:
-                raise Exception(f"Error while fetching {url}: no text")
+            if not r.headers['Content-Type'].startswith('text'):
+                raise Exception(f"Error while fetching {url}: not text")
+        
+        for i in SUMMARY_IGNORED_DOMAINS:
+            if i in url:
+                raise Exception(f"Error while fetching {url}: domain is ignored")
         
         stemmer = Stemmer(language)
         summarizer = Summarizer(stemmer) # type: ignore
@@ -346,7 +354,10 @@ class Summary(commands.Cog):
         else:
             return await interaction.response.send_message("Le message ne contient pas d'URL ou de texte suffisamment long pour avoir besoin d'être résumé", ephemeral=True)
 
-        resp = '\n'.join(map(str, sentences))
+        if not sentences:
+            resp = 'Résumé indisponible'
+        else:
+            resp = '\n'.join(map(str, sentences))
         desc = f"**Résumé de <{url[0]}>**" + f"\n>>> *{resp}*" if url else f"__**Résumé du texte :**__" + f"\n>>> *{resp}*"
         em = discord.Embed(description=desc, color=0x2F3136)
         em.set_footer(text=f"Langue : {lang.capitalize()} | Nombre de phrases : 5")
