@@ -338,7 +338,7 @@ class Summary(commands.Cog):
         if not isinstance(channel, (discord.TextChannel, discord.DMChannel, discord.GroupChannel, discord.Thread)):
             return await interaction.response.send_message("Vous devez utiliser cette commande dans un salon de discussion", ephemeral=True)
         view = ChooseLanguageView(self, interaction)
-        await interaction.response.send_message("Indiquez la langue du contenu à résumer :", view=view, ephemeral=True)
+        await interaction.response.send_message("Afin d'obtenir un résumé fiable, veuillez indiquer la langue du contenu :", view=view, ephemeral=True)
         await view.wait()
         lang = view.current_language
         
