@@ -273,10 +273,10 @@ class Summary(commands.Cog):
             raise e
         if response.status_code != 200:
             raise Exception(f"Error while fetching {url}: {response.status_code}")
-        if not response.text:
-            raise Exception(f"Error while fetching {url}: no text")
         
         parser = HtmlParser.from_url(url, Tokenizer(language))
+        if not parser.document.text:
+            raise Exception(f"Error while fetching {url}: no text")
         stemmer = Stemmer(language)
         summarizer = Summarizer(stemmer) # type: ignore
         summarizer.stop_words = get_stop_words(language)
@@ -312,7 +312,10 @@ class Summary(commands.Cog):
         if url is None and text is None:
             return await interaction.response.send_message("Veuillez fournir soit un texte, soit une URL", ephemeral=True)
         if url is not None:
-            sentences = self.summarize_url(url, language, sentences_count)
+            try:
+                sentences = self.summarize_url(url, language, sentences_count)
+            except Exception:
+                sentences = [f"Résumé indisponible"]
         elif text is not None:
             sentences = self.summarize_text(text, language, sentences_count)
         else:
