@@ -248,7 +248,7 @@ class Summary(commands.Cog):
             return
         if not message.content:
             return
-        urls = re.findall(r'(https?://[^\s]+)', message.content)
+        urls = re.findall(r'(https?://[^\s]+)', message.clean_content)
         if not urls:
             return
         for url in urls:
@@ -267,14 +267,24 @@ class Summary(commands.Cog):
         stemmer = Stemmer(language)
         summarizer = Summarizer(stemmer) # type: ignore
         summarizer.stop_words = get_stop_words(language)
-        return summarizer(parser.document, sentences_count)
+        try:
+            s = summarizer(parser.document, sentences_count)
+        except Exception as e:
+            logger.error(f"Error while summarizing {url}: {e}")
+            raise e
+        return s
     
     def summarize_text(self, text: str, language: str, sentences_count: int = 5):
         parser = PlaintextParser.from_string(text, Tokenizer(language))
         stemmer = Stemmer(language)
         summarizer = Summarizer(stemmer) # type: ignore
         summarizer.stop_words = get_stop_words(language)
-        return summarizer(parser.document, sentences_count)
+        try:
+            s = summarizer(parser.document, sentences_count)
+        except Exception as e:
+            logger.error(f"Error while summarizing text: {e}")
+            raise e
+        return s
     
     @app_commands.command(name="summarize")
     async def summarize_command(self, interaction: discord.Interaction, url: Optional[str], text: Optional[str], language: str = "french", sentences_count: app_commands.Range[int, 1, 10] = 5):
@@ -340,9 +350,9 @@ class Summary(commands.Cog):
             results = self.search_text(interaction.guild, search.lower()) # type: ignore
             if not results:
                 return await interaction.followup.send("**Aucun résultat ·** Aucune URL ne correspond à votre recherche", ephemeral=True)
-            ordered_results = sorted(results, key=lambda d: int(json.loads(d['post_history'])[-1]['timestamp']), reverse=True)[:10]
+            ordered_results = sorted(results, key=lambda d: int(json.loads(d['post_history'])[-1]['timestamp']), reverse=True)[:20]
         else:
-            ordered_results = self.get_last_urls(interaction.guild, 10) # type: ignore
+            ordered_results = self.get_last_urls(interaction.guild, 20) # type: ignore
         if not ordered_results:
             return await interaction.followup.send("**Base de données vide ·** Personne n'a encore posté d'URL depuis le début du suivi", ephemeral=True)
 
