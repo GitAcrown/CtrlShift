@@ -3,7 +3,9 @@ import logging
 import random
 import sqlite3
 from io import BytesIO
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, List
+import colorgram
+import textwrap
 
 import aiohttp
 import discord
@@ -165,7 +167,81 @@ class MyQuotesView(discord.ui.View):
         
         await self.buttons_logic(interaction)
         await self.message.edit(embed=self.embed_quote(self.inv_position))
+        
+class SelectMsgs(discord.ui.Select):
+    def __init__(self, editor: 'QuotifyEditor', placeholder: str, options: List[discord.SelectOption]):
+        super().__init__(placeholder=placeholder, 
+                         min_values=1, 
+                         max_values=len(options), 
+                         options=options)
+        self.editor = editor
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.editor.selected = sorted([self.editor.original_message] + [m for m in self.editor.potential_messages if str(m.id) in self.values], key=lambda m: m.created_at)
+        self.options = [discord.SelectOption(label=f"{m.created_at.strftime('%d/%m/%Y %H:%M:%S')}", value=str(m.id), description=textwrap.shorten(m.clean_content, 100, placeholder='...'), default=str(m.id) in self.values) for m in self.editor.all_messages]
+        await self.editor._send_update()
+        
+class QuotifyEditor(discord.ui.View):
+    def __init__(self, cog: 'Quotes', selected_message: discord.Message, potential_messages: List[discord.Message], *, timeout: Optional[float] = 180):
+        super().__init__(timeout=timeout)
+        self._cog = cog
+        
+        self.original_message = selected_message
+        self.selected = [selected_message]
+        self.potential_messages = potential_messages
+        self.all_messages = sorted([selected_message] + potential_messages, key=lambda m: m.created_at)
+        
+        self.interaction : Optional[discord.Interaction] = None
+        
+        self.color_index = 1
+        
+        if potential_messages:
+            self.select_msgs = SelectMsgs(self, "Sélectionnez les messages à fusionner", [discord.SelectOption(label=f"{m.created_at.strftime('%d/%m/%Y %H:%M:%S')}", value=str(m.id), description=textwrap.shorten(m.clean_content, 100, placeholder='...'), default=True if m == selected_message else False) for m in self.all_messages])
+            self.add_item(self.select_msgs)
+        
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self._cog.bot.user.id:
+            await interaction.response.send_message("Vous ne pouvez pas utiliser cet éditeur car vous n'en êtes pas l'auteur.", ephemeral=True)
+            return False
+        return True
+        
+    async def start(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            image = await self._cog.create_quote_img(self.selected, self.color_index)
+        except Exception as e:
+            logger.exception("Error while creating quote image", exc_info=True)
+            return await interaction.followup.send(f"Une erreur est survenue dans la génération de l'image : `{e}`")
+        await interaction.followup.send(view=self, file=image)
+        self.interaction = interaction
+
+    async def on_timeout(self) -> None:
+        view = discord.ui.View()
+        msgurl = self.selected[0].jump_url
+        view.add_item(discord.ui.Button(label="Source", url=msgurl, style=discord.ButtonStyle.link))
+        await self.interaction.edit_original_response(content='', view=view)
+        
+    async def _send_update(self):
+        try:
+            image = await self._cog.create_quote_img(self.selected, self.color_index)
+        except Exception as e:
+            return await self.interaction.edit_original_response(content=f"Une erreur est survenue dans la génération de l'image : `{e}`")
+        await self.interaction.edit_original_response(view=self, attachments=[image])
+        
+    @discord.ui.button(label="Changer la couleur", style=discord.ButtonStyle.blurple)
+    async def change_color(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.color_index = self.color_index + 1 if self.color_index < 2 else 0
+        await self._send_update()
     
+    @discord.ui.button(label="Sauvegarder et quitter", style=discord.ButtonStyle.red)
+    async def save_quit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        view = discord.ui.View()
+        msgurl = self.selected[0].jump_url
+        view.add_item(discord.ui.Button(label="Source", url=msgurl, style=discord.ButtonStyle.link))
+        await self.interaction.edit_original_response(content='', view=view)
         
 class QuotifyHistoryView(discord.ui.View):
     def __init__(self, cog: 'Quotes', interaction: discord.Interaction, only_user: Optional[discord.Member] = None, order_desc: bool = True, *, timeout: Optional[float] = 90):
@@ -295,6 +371,12 @@ class Quotes(commands.Cog):
         )
         self.bot.tree.add_command(self.context_menu)
         
+        self.quotify2 = app_commands.ContextMenu(
+            name='QuoteMaker (BETA)',
+            callback=self.ctx_quote_maker
+        )
+        self.bot.tree.add_command(self.quotify2)
+        
         self.bookmark_emoji = self.bot.get_emoji(1077959551669776384)
         
     @commands.Cog.listener()
@@ -397,6 +479,8 @@ class Quotes(commands.Cog):
         except commands.BadArgument as e:
             await interaction.response.send_message(str(e), ephemeral=True)
         
+    # Quotify v1 (deprecated) -----------------------------------------
+        
     async def quotify_message_img(self, message: discord.Message, fontname: str = None) -> discord.File:
         x1 = 512
         y1 = 512
@@ -463,12 +547,112 @@ class Quotes(commands.Cog):
             buffer.seek(0)
             return discord.File(buffer, filename=f'quote_{message.id}.png')
         
+    # Quotify v2 ---------------------------------------------------------------
+     
+    def _get_quote_img(self, background: Union[str, BytesIO], text: str, author_text: str, *, 
+                       gradient_color_index: int = 1, fontname: str = 'NotoBebasNeue.ttf') -> Image.Image:
+        if len(text) > 500:
+            raise ValueError("text must be less than 500 characters")
+        if len(author_text) > 32:
+            raise ValueError("author_text must be less than 32 characters")
+        if gradient_color_index < 0 or gradient_color_index > 2:
+            raise ValueError("gradient_color_index must be between 0 and 2")
+        
+        img = Image.open(background)
+        w, h = (512, 512)
+        bw, bh = (w - 20, h - 50)
+        img = img.convert("RGBA").resize((w, h)) 
+        fontfile = get_package_path('quotes') + f"/{fontname}"
+
+        gradient_magnitude = 0.85 + 0.05 * (len(text) / 100)
+        img = self._add_quote_gradient(img, gradient_magnitude, colorgram.extract(img, 3)[gradient_color_index].rgb)
+        font = ImageFont.truetype(fontfile, 56, encoding='unic')
+        author_font = ImageFont.truetype(fontfile, 26, encoding='unic')
+        draw = ImageDraw.Draw(img)
+            
+        wrapwidth = int(bw / font.getlength(' ') + (0.02 * len(text)))
+        wrap = textwrap.fill(text, width=wrapwidth, placeholder='…', replace_whitespace=False, max_lines=8)
+        box = draw.multiline_textbbox((0, 0), wrap, font=font, align='center')
+        while box[2] > bw or box[3] > bh:
+            font = ImageFont.truetype(fontfile, font.size - 1)
+            box = draw.multiline_textbbox((0, 0), wrap, font=font, align='center')
+
+        draw.multiline_text((w/2, bh), wrap, font=font, align='center', fill='white', anchor='md')
+        draw.text((w/2 - 7, h - 16), author_text, font=author_font, fill='white', anchor='md')
+        return img
+
+    def _add_quote_gradient(self, image: Image.Image, gradient_magnitude=1.0, color: Tuple[int, int, int]=(0, 0, 0)):
+        im = image
+        if im.mode != 'RGBA':
+            im = im.convert('RGBA')
+        width, height = im.size
+        gradient = Image.new('L', (1, height), color=0xFF)
+        for x in range(height):
+            gradient.putpixel((0, x), int(255 * (gradient_magnitude * float(x)/(width))))
+        
+        alpha = gradient.resize(im.size)
+        black_im = Image.new('RGBA', (width, height), color=color) # i.e. black
+        black_im.putalpha(alpha)
+        gradient_im = Image.alpha_composite(im, black_im)
+        return gradient_im
+    
+    async def create_quote_img(self, messages: List[discord.Message], color_index: int) -> discord.File:
+        """Crée une image de citation à partir d'un ou plusieurs message(s) (v2)"""
+        messages = sorted(messages, key=lambda m: m.created_at)
+        user_avatar = BytesIO(await messages[0].author.display_avatar.read())
+        message_year = messages[0].created_at.strftime('%Y')
+        content = ' '.join(m.clean_content for m in messages)
+        try:
+            image = self._get_quote_img(user_avatar, f"“{content}”", f'— {messages[0].author.name}, {message_year}', gradient_color_index=color_index)
+        except ValueError as e:
+            logger.error(f"Une erreur est survenue lors de la création de l'image de citation: {e}", exc_info=True)
+            raise ValueError(f"Une erreur est survenue lors de la création de l'image de citation: {e}")
+        with BytesIO() as buffer:
+            image.save(buffer, format='PNG')
+            buffer.seek(0)
+            desc = f"'{content}'\n— {messages[0].author.name}, {message_year}"
+            return discord.File(buffer, filename=f"quote_{'_'.join([str(m.id) for m in messages])}.png", description=desc)
+        
+    async def get_potential_quote_messages(self, channel: Union[discord.TextChannel, discord.Thread], message: discord.Message) -> List[discord.Message]:
+        """Récupère les messages potentiels à partir du message donné"""
+        potential_messages = []
+        async for m in channel.history(limit=10, before=message.created_at):
+            if m.author == message.author and len(potential_messages) < 5:
+                potential_messages.append(m)
+            else:
+                break
+        async for m in channel.history(limit=10, after=message.created_at):
+            if m.author == message.author and len(potential_messages) < 5:
+                potential_messages.append(m)
+            else:
+                break
+        
+        return sorted(potential_messages, key=lambda m: m.created_at)
+
+        
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
         """Menu contextuel permettant de transformer un message en citation imagée"""
+        if not message.content or message.content.isspace():
+            return await interaction.response.send_message("Le message ne contient pas de texte", ephemeral=True)
         try:
             view = discord.ui.View()
             view.add_item(discord.ui.Button(label="Source", style=discord.ButtonStyle.secondary, url=message.jump_url))
             await interaction.response.send_message(file=await self.quotify_message_img(message, fontname='NotoBebasNeue.ttf'), view=view)
+            intermsg = await interaction.original_response()
+            if intermsg:
+                self.save_quote(intermsg, message.author)
+        except commands.BadArgument as e:
+            await interaction.response.send_message(str(e), ephemeral=True)
+            
+    async def ctx_quote_maker(self, interaction: discord.Interaction, message: discord.Message):
+        """Menu contextuel permettant de transformer un message en citation imagée (v2)"""
+        if not message.content or message.content.isspace():
+            return await interaction.response.send_message("Le message ne contient pas de texte", ephemeral=True)
+        if not isinstance(message.channel, (discord.TextChannel, discord.Thread)):
+            return await interaction.response.send_message("Le message doit être dans un salon de discussion", ephemeral=True)
+        try:
+            potential = await self.get_potential_quote_messages(message.channel, message)
+            await QuotifyEditor(self, message, potential, timeout=30).start(interaction)
             intermsg = await interaction.original_response()
             if intermsg:
                 self.save_quote(intermsg, message.author)
