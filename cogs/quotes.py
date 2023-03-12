@@ -1,7 +1,6 @@
 from datetime import datetime
 import logging
 import random
-import sqlite3
 from io import BytesIO
 from typing import Optional, Union, Tuple, List
 import colorgram
