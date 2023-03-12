@@ -228,10 +228,10 @@ class QuotifyEditor(discord.ui.View):
             return await self.interaction.edit_original_response(content=f"Une erreur est survenue dans la génération de l'image : `{e}`")
         await self.interaction.edit_original_response(view=self, attachments=[image])
         
-    @discord.ui.button(label="Changer la couleur", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="Changer le dégradé", style=discord.ButtonStyle.blurple)
     async def change_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        self.color_index = self.color_index + 1 if self.color_index < 2 else 0
+        self.color_index = self.color_index + 1 if self.color_index < 4 else 0
         await self._send_update()
     
     @discord.ui.button(label="Sauvegarder et quitter", style=discord.ButtonStyle.red)
@@ -554,8 +554,8 @@ class Quotes(commands.Cog):
             raise ValueError("text must be less than 500 characters")
         if len(author_text) > 32:
             raise ValueError("author_text must be less than 32 characters")
-        if gradient_color_index < 0 or gradient_color_index > 2:
-            raise ValueError("gradient_color_index must be between 0 and 2")
+        if gradient_color_index < 0 or gradient_color_index > 4:
+            raise ValueError("gradient_color_index must be between 0 and 4")
         
         img = Image.open(background)
         w, h = (512, 512)
@@ -564,7 +564,7 @@ class Quotes(commands.Cog):
         fontfile = get_package_path('quotes') + f"/{fontname}"
 
         gradient_magnitude = 0.85 + 0.05 * (len(text) / 100)
-        img = self._add_quote_gradient(img, gradient_magnitude, colorgram.extract(img, 3)[gradient_color_index].rgb)
+        img = self._add_quote_gradient(img, gradient_magnitude, colorgram.extract(img, 5)[gradient_color_index].rgb)
         font = ImageFont.truetype(fontfile, 56, encoding='unic')
         author_font = ImageFont.truetype(fontfile, 26, encoding='unic')
         draw = ImageDraw.Draw(img)
