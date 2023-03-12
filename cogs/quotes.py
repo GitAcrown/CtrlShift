@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 import random
 from io import BytesIO
-from typing import Optional, Union, Tuple, List
+from typing import Optional, Union, Tuple, List, Literal
 import colorgram
 import textwrap
 
@@ -194,6 +194,7 @@ class QuotifyEditor(discord.ui.View):
         self.interaction : Optional[discord.Interaction] = None
         
         self.color_index = 1
+        self.text_color : Literal['white', 'black'] = 'white'
         
         if potential_messages:
             self.select_msgs = SelectMsgs(self, "Sélectionnez les messages à fusionner", [discord.SelectOption(label=f"{m.created_at.strftime('%d/%m/%Y %H:%M:%S')}", value=str(m.id), description=textwrap.shorten(m.clean_content, 100, placeholder='...'), default=True if m == selected_message else False) for m in self.all_messages])
@@ -208,7 +209,7 @@ class QuotifyEditor(discord.ui.View):
     async def start(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
-            image = await self._cog.create_quote_img(self.selected, self.color_index)
+            image = await self._cog.create_quote_img(self.selected, self.color_index, self.text_color)
         except Exception as e:
             logger.exception("Error while creating quote image", exc_info=True)
             return await interaction.followup.send(f"Une erreur est survenue dans la génération de l'image : `{e}`")
@@ -223,18 +224,24 @@ class QuotifyEditor(discord.ui.View):
         
     async def _send_update(self):
         try:
-            image = await self._cog.create_quote_img(self.selected, self.color_index)
+            image = await self._cog.create_quote_img(self.selected, self.color_index, self.text_color)
         except Exception as e:
             return await self.interaction.edit_original_response(content=f"Une erreur est survenue dans la génération de l'image : `{e}`")
         await self.interaction.edit_original_response(view=self, attachments=[image])
         
-    @discord.ui.button(label="Changer le dégradé", style=discord.ButtonStyle.blurple)
-    async def change_color(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(emoji='<:refresh:1084592432244592640>', label="Couleur texte", style=discord.ButtonStyle.green)
+    async def change_text_color(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.text_color = 'black' if self.text_color == 'white' else 'white'
+        await self._send_update()
+        
+    @discord.ui.button(emoji='<:refresh:1084592432244592640>', label="Couleur dégradé", style=discord.ButtonStyle.blurple)
+    async def change_gradient_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.color_index = self.color_index + 1 if self.color_index < 4 else 0
         await self._send_update()
     
-    @discord.ui.button(label="Sauvegarder et quitter", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Quitter", style=discord.ButtonStyle.red)
     async def save_quit(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         view = discord.ui.View()
@@ -549,7 +556,8 @@ class Quotes(commands.Cog):
     # Quotify v2 ---------------------------------------------------------------
      
     def _get_quote_img(self, background: Union[str, BytesIO], text: str, author_text: str, *, 
-                       gradient_color_index: int = 1, fontname: str = 'NotoBebasNeue.ttf') -> Image.Image:
+                       gradient_color_index: int = 1, textcolor: Literal['white', 'black'], 
+                       fontname: str = 'NotoBebasNeue.ttf') -> Image.Image:
         if len(text) > 500:
             raise ValueError("text must be less than 500 characters")
         if len(author_text) > 32:
@@ -576,8 +584,8 @@ class Quotes(commands.Cog):
             font = ImageFont.truetype(fontfile, font.size - 1)
             box = draw.multiline_textbbox((0, 0), wrap, font=font, align='center')
 
-        draw.multiline_text((w/2, bh), wrap, font=font, align='center', fill='white', anchor='md')
-        draw.text((w/2 - 7, h - 16), author_text, font=author_font, fill='white', anchor='md')
+        draw.multiline_text((w/2, bh), wrap, font=font, align='center', fill=textcolor, anchor='md')
+        draw.text((w/2 - 7, h - 16), author_text, font=author_font, fill=textcolor, anchor='md')
         return img
 
     def _add_quote_gradient(self, image: Image.Image, gradient_magnitude=1.0, color: Tuple[int, int, int]=(0, 0, 0)):
@@ -595,14 +603,14 @@ class Quotes(commands.Cog):
         gradient_im = Image.alpha_composite(im, black_im)
         return gradient_im
     
-    async def create_quote_img(self, messages: List[discord.Message], color_index: int) -> discord.File:
+    async def create_quote_img(self, messages: List[discord.Message], gradient_index: int, text_color: Literal['white', 'black']) -> discord.File:
         """Crée une image de citation à partir d'un ou plusieurs message(s) (v2)"""
         messages = sorted(messages, key=lambda m: m.created_at)
         user_avatar = BytesIO(await messages[0].author.display_avatar.read())
         message_year = messages[0].created_at.strftime('%Y')
         content = ' '.join(m.clean_content for m in messages)
         try:
-            image = self._get_quote_img(user_avatar, f"“{content}”", f'— {messages[0].author.name}, {message_year}', gradient_color_index=color_index)
+            image = self._get_quote_img(user_avatar, f"“{content}”", f'— {messages[0].author.name}, {message_year}', gradient_color_index=gradient_index, textcolor=text_color)
         except ValueError as e:
             logger.error(f"Une erreur est survenue lors de la création de l'image de citation: {e}", exc_info=True)
             raise ValueError(f"Une erreur est survenue lors de la création de l'image de citation: {e}")
