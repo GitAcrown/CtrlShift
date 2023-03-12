@@ -201,8 +201,8 @@ class QuotifyEditor(discord.ui.View):
             self.add_item(self.select_msgs)
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self._cog.bot.user.id:
-            await interaction.response.send_message("Vous ne pouvez pas utiliser cet éditeur car vous n'en êtes pas l'auteur.", ephemeral=True)
+        if interaction.user.id != self.interaction.user.id:
+            await interaction.response.send_message("Vous ne pouvez pas utiliser cette vue car vous n'en êtes pas l'auteur.", ephemeral=True)
             return False
         return True
         
@@ -238,7 +238,7 @@ class QuotifyEditor(discord.ui.View):
     @discord.ui.button(emoji='<:refresh:1084592432244592640>', label="Couleur dégradé", style=discord.ButtonStyle.blurple)
     async def change_gradient_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        self.color_index = self.color_index + 1 if self.color_index < 4 else 0
+        self.color_index = self.color_index + 1 if self.color_index < 2 else 0
         await self._send_update()
     
     @discord.ui.button(label="Quitter", style=discord.ButtonStyle.red)
@@ -562,8 +562,8 @@ class Quotes(commands.Cog):
             raise ValueError("text must be less than 500 characters")
         if len(author_text) > 32:
             raise ValueError("author_text must be less than 32 characters")
-        if gradient_color_index < 0 or gradient_color_index > 4:
-            raise ValueError("gradient_color_index must be between 0 and 4")
+        if gradient_color_index < 0 or gradient_color_index > 2:
+            raise ValueError("gradient_color_index must be between 0 and 2")
         
         img = Image.open(background)
         w, h = (512, 512)
@@ -572,7 +572,7 @@ class Quotes(commands.Cog):
         fontfile = get_package_path('quotes') + f"/{fontname}"
 
         gradient_magnitude = 0.85 + 0.05 * (len(text) / 100)
-        img = self._add_quote_gradient(img, gradient_magnitude, colorgram.extract(img, 5)[gradient_color_index].rgb)
+        img = self._add_quote_gradient(img, gradient_magnitude, colorgram.extract(img, 3)[gradient_color_index].rgb)
         font = ImageFont.truetype(fontfile, 56, encoding='unic')
         author_font = ImageFont.truetype(fontfile, 26, encoding='unic')
         draw = ImageDraw.Draw(img)
