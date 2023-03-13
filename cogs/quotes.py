@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Optional, Union, Tuple, List, Literal
 import colorgram
 import textwrap
-
+import re
 import aiohttp
 import discord
 from discord import app_commands
@@ -613,7 +613,7 @@ class Quotes(commands.Cog):
         messages = sorted(messages, key=lambda m: m.created_at)
         user_avatar = BytesIO(await messages[0].author.display_avatar.read())
         message_year = messages[0].created_at.strftime('%Y')
-        content = ' '.join(m.clean_content for m in messages)
+        content = ' '.join(self.parse_emojis(m.clean_content) for m in messages)
         try:
             image = self._get_quote_img(user_avatar, f"“{content}”", f'— {messages[0].author.name}, {message_year}', possible_colors=gradient_possible_colors, gradient_index=gradient_index, textcolor=text_color)
         except ValueError as e:
@@ -645,6 +645,10 @@ class Quotes(commands.Cog):
         
         potential_messages = before_msgs + after_msgs
         return sorted(potential_messages, key=lambda m: m.created_at)
+    
+    def parse_emojis(self, text: str) -> str:
+        """Remplace les emojis par leur nom"""
+        return re.sub(r'<a?:(\w+):\d+>', r':\1:', text)
 
         
     async def ctx_quotify_message(self, interaction: discord.Interaction, message: discord.Message):
