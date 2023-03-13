@@ -628,15 +628,10 @@ class Quotes(commands.Cog):
     async def get_potential_quote_messages(self, channel: Union[discord.TextChannel, discord.Thread], message: discord.Message) -> List[discord.Message]:
         """Récupère les messages potentiels à partir du message donné"""
         potential_messages = []
-        async for m in channel.history(limit=10, before=message.created_at):
-            if m.author == message.author and len(potential_messages) < 5:
+        async for m in channel.history(limit=20, around=message.created_at):
+            if m.author == message.author and len(potential_messages) < 4:
                 potential_messages.append(m)
-            else:
-                break
-        async for m in channel.history(limit=10, after=message.created_at):
-            if m.author == message.author and len(potential_messages) < 5:
-                potential_messages.append(m)
-            else:
+            elif len(potential_messages) >= 4:
                 break
         
         return sorted(potential_messages, key=lambda m: m.created_at)
