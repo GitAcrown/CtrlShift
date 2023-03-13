@@ -243,7 +243,7 @@ class QuotifyEditor(discord.ui.View):
         self.color_index = self.color_index + 1 if self.color_index < EXTRACT_COLOR_LIMIT else 0
         await self._send_update()
     
-    @discord.ui.button(label="Terminer", style=discord.ButtonStyle.red)
+    @discord.ui.button(emoji='<:save:1084949130096431225>', style=discord.ButtonStyle.red)
     async def save_quit(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         view = discord.ui.View()
@@ -629,11 +629,15 @@ class Quotes(commands.Cog):
         """Récupère les messages potentiels à partir du message donné"""
         before_msgs, after_msgs = [], []
         async for m in channel.history(limit=10, before=message.created_at):
+            if not m.content or m.content.isspace():
+                continue
             if m.author == message.author and len(before_msgs) < 2:
                 before_msgs.append(m)
             elif len(before_msgs) >= 2:
                 break
         async for m in channel.history(limit=10, after=message.created_at):
+            if not m.content or m.content.isspace():
+                continue
             if m.author == message.author and len(after_msgs) < 2:
                 after_msgs.append(m)
             elif len(after_msgs) >= 2:
