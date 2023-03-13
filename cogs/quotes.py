@@ -231,13 +231,13 @@ class QuotifyEditor(discord.ui.View):
             return await self.interaction.edit_original_response(content=f"Une erreur est survenue dans la génération de l'image : `{e}`")
         await self.interaction.edit_original_response(view=self, attachments=[image])
         
-    @discord.ui.button(emoji='<:refresh:1084592432244592640>', label="Couleur texte", style=discord.ButtonStyle.green)
+    @discord.ui.button(emoji='<:switch:1084949428990914590>', label="Couleur texte", style=discord.ButtonStyle.green)
     async def change_text_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.text_color = 'black' if self.text_color == 'white' else 'white'
         await self._send_update()
         
-    @discord.ui.button(emoji='<:refresh:1084592432244592640>', label="Couleur dégradé", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(emoji='<:switch:1084949428990914590>', label="Couleur dégradé", style=discord.ButtonStyle.blurple)
     async def change_gradient_color(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.color_index = self.color_index + 1 if self.color_index < EXTRACT_COLOR_LIMIT else 0
