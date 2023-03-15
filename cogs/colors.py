@@ -116,6 +116,9 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             if not url:
                 async for message in interaction.channel.history(limit=30):
                     if message.attachments:
+                        type = message.attachments[0].content_type
+                        if type not in ['image/png', 'image/jpeg', 'image/gif']:
+                            continue
                         url = message.attachments[0].url
                         break
                 else:
