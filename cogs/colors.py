@@ -75,30 +75,39 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         image = Image.open(img)
         return colorgram.extract(image, n)
     
-    def draw_image_palette(self, img: Union[str, BytesIO]) -> Image.Image:
+    def draw_image_palette(self, img: Union[str, BytesIO], n_colors: int = 5) -> Image.Image:
         """Ajoute la palette de 5 couleur extraite de l'image sur le côté de celle-ci avec leurs codes hexadécimaux"""
-        colors : List[colorgram.Color] = colorgram.extract(img, 5)
+        colors : List[colorgram.Color] = colorgram.extract(img, n_colors)
         image = Image.open(img).convert("RGBA")
         image = ImageOps.contain(image, (500, 500))
         iw, ih = image.size
         w, h = (iw + 100, ih)
         font = ImageFont.truetype('cogs/packages/colors/RobotoRegular.ttf', 18)   
         palette = Image.new('RGBA', (w, h), color='white')
+        maxcolors = h // 30
+        if len(colors) > maxcolors:
+            colors = colors[:maxcolors]
+        blockheight = h // len(colors)
         for i, color in enumerate(colors):
-            palette.paste(color.rgb, (iw, i * 100, iw + 100, i * 100 + 100))
+            # On veut que le dernier block occupe tout l'espace restant
+            if i == len(colors) - 1:
+                palette.paste(color.rgb, (iw, i * blockheight, iw + 100, h))
+            else:
+                palette.paste(color.rgb, (iw, i * blockheight, iw + 100, i * blockheight + blockheight))
             draw = ImageDraw.Draw(palette)
             hex_color = f'#{color.rgb[0]:02x}{color.rgb[1]:02x}{color.rgb[2]:02x}'.upper()
             if color.rgb[0] + color.rgb[1] + color.rgb[2] < 382:
-                draw.text((iw + 10, i * 100 + 10), f'{hex_color}', fill='white', font=font)
+                draw.text((iw + 10, i * blockheight + 10), f'{hex_color}', fill='white', font=font)
             else:
-                draw.text((iw + 10, i * 100 + 10), f'{hex_color}', fill='black', font=font)
+                draw.text((iw + 10, i * blockheight + 10), f'{hex_color}', fill='black', font=font)
         palette.paste(image, (0, 0))
         return palette
     
     @app_commands.command(name='palette')
-    async def show_palette(self, interaction: discord.Interaction, file: Optional[discord.Attachment] = None, url: Optional[str] = None, user: Optional[discord.User] = None):
+    async def show_palette(self, interaction: discord.Interaction, colors: app_commands.Range[int, 3, 10] = 5, file: Optional[discord.Attachment] = None, url: Optional[str] = None, user: Optional[discord.User] = None):
         """Génère une palette de 5 couleurs (les plus dominantes) à partir d'une image. Si aucune image n'est fournie, la palette est générée à partir de la dernière image envoyée dans le salon.
         
+        :param colors: Nombre de couleurs à extraire de l'image (entre 3 et 10)
         :param file: Image dont on veut extraire la palette
         :param url: URL directe d'une image dont on veut extraire la palette
         :param user: Utilisateur dont on veut extraire la palette de la photo de profil
@@ -108,7 +117,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             return await interaction.response.send_message("**Erreur · ** Vous ne pouvez pas utiliser cette commande ici.", ephemeral=True)
         if file:
             img = BytesIO(await file.read())
-            palette = self.draw_image_palette(img)
+            palette = self.draw_image_palette(img, colors)
         else:
             if user:
                 url = user.display_avatar.url
@@ -133,7 +142,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                     return await interaction.response.send_message("**Erreur · ** L'image est trop volumineuse (max. 8 Mo).", ephemeral=True)
                 img = BytesIO(r.content)
                 
-            palette = self.draw_image_palette(img)
+            palette = self.draw_image_palette(img, colors)
         
         if not palette:
             return await interaction.response.send_message("**Erreur · ** Une erreur s'est produite lors de la génération de la palette.", ephemeral=True)
