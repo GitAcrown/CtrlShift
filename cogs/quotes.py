@@ -210,6 +210,10 @@ class QuotifyEditor(discord.ui.View):
     async def start(self, interaction: discord.Interaction):
         await interaction.response.defer()
         self.gradient_colors = self._cog._get_image_colors(BytesIO(await self.original_message.author.display_avatar.read()), EXTRACT_COLOR_LIMIT)
+        # Si la couleur de base du dégradé est trop claire, on inverse le texte en noir
+        color = self.gradient_colors[self.color_index].rgb
+        if color[0] + color[1] + color[2] > 255 * 1.5:
+            self.text_color = 'black'
         try:
             image = await self._cog.create_quote_img(self.selected, self.color_index, self.gradient_colors, self.text_color)
         except Exception as e:
