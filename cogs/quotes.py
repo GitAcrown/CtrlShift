@@ -378,13 +378,13 @@ class Quotes(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.context_menu = app_commands.ContextMenu(
-            name='Quotifier',
+            name='Quotify (Classic)',
             callback=self.ctx_quotify_message
         )
         self.bot.tree.add_command(self.context_menu)
         
         self.quotify2 = app_commands.ContextMenu(
-            name='QuoteMaker (BETA)',
+            name='QuoteMaker',
             callback=self.ctx_quote_maker
         )
         self.bot.tree.add_command(self.quotify2)
