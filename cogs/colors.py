@@ -12,7 +12,7 @@ from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from common.dataio import get_sqlite_database
+from common.dataio import get_sqlite_database, get_package_path
 
 logger = logging.getLogger('ctrlshift.Colors')
 
@@ -21,12 +21,12 @@ DEFAULT_SETTINGS = {
 }
 
 class ChooseColorMenu(discord.ui.View):
-    def __init__(self, cog: 'Colors', initial_interaction: discord.Interaction, colors: List[colorgram.Color]):
+    def __init__(self, cog: 'Colors', initial_interaction: discord.Interaction, colors: List[colorgram.Color], previews: List[Image.Image]):
         super().__init__(timeout=60)
         self._cog = cog
         self.colors = colors
         
-        self.images = self._create_color_blocks()
+        self.previews = previews
         self.index = 0
         
         self.initial_interaction = initial_interaction
@@ -36,10 +36,6 @@ class ChooseColorMenu(discord.ui.View):
     def color_choice(self) -> colorgram.Color:
         """Renvoie la couleur sélectionnée"""
         return self.colors[self.index]
-        
-    def _create_color_blocks(self) -> List[Image.Image]:
-        """Renvoie la liste des blocs de couleurs"""
-        return [self._cog.create_color_block(color.rgb, False) for color in self.colors]
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Vérifie que l'utilisateur est bien le même que celui qui a lancé la commande"""
@@ -62,14 +58,14 @@ class ChooseColorMenu(discord.ui.View):
     async def start(self):
         """Affiche le menu de sélection de couleur"""
         with BytesIO() as f:
-            self.images[self.index].save(f, format='png')
+            self.previews[self.index].save(f, format='png')
             f.seek(0)
             await self.initial_interaction.response.send_message(embed=self.get_embed(), file=discord.File(f, 'color.png'), view=self)
             
     async def update(self):
         """Met à jour l'image de la couleur sélectionnée"""
         with BytesIO() as f:
-            self.images[self.index].save(f, format='png')
+            self.previews[self.index].save(f, format='png')
             f.seek(0)
             await self.initial_interaction.edit_original_response(embed=self.get_embed(), attachments=[discord.File(f, 'color.png')])
 
@@ -275,6 +271,8 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
     
     def create_color_block(self, color: Union[str, tuple], with_text: bool = True) -> Image.Image:
         """Renvoie un bloc de couleur"""
+        path = get_package_path('colors')
+        font_path = f"{path}/gg_sans.ttf"
         if isinstance(color, str):
             color = self.normalize_color(color) #type: ignore
             if not color:
@@ -284,9 +282,9 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         d = ImageDraw.Draw(image)
         if with_text:
             if sum(color) < 382:
-                d.text((10, 10), f"#{color}", fill=(255, 255, 255), font=ImageFont.truetype("arial.ttf", 20))
+                d.text((10, 10), f"#{color}", fill=(255, 255, 255), font=ImageFont.truetype(font_path, 20))
             else:
-                d.text((10, 10), f"#{color}", fill=(0, 0, 0), font=ImageFont.truetype("arial.ttf", 20))
+                d.text((10, 10), f"#{color}", fill=(0, 0, 0), font=ImageFont.truetype(font_path, 20))
         return image
     
     def color_embed(self, color: str, text: str) -> discord.Embed:
@@ -300,6 +298,38 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             embed.set_footer(text=f"{info['name']['value']}")
         embed.set_image(url="attachment://color.png")
         return embed
+    
+    async def simulate_discord_display(self, user: Union[discord.User, discord.Member], name_color: tuple) -> Image.Image:
+        avatar = await user.display_avatar.read()
+        avatar = Image.open(BytesIO(avatar))
+        avatar = avatar.resize((128, 128)).convert("RGBA")
+        
+        # Mettre l'avatar en cercle
+        mask = Image.new("L", avatar.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0) + avatar.size, fill=255)
+        avatar.putalpha(mask)
+        avatar = avatar.resize((50, 50))
+        
+        images = []
+        # Créer une version avec le fond foncé et une version avec le fond clair
+        for v in [(54, 57, 63), (255, 255, 255)]:
+            bg = Image.new("RGBA", (320, 94), v)
+            bg.paste(avatar, (10, 10), avatar)
+            d = ImageDraw.Draw(bg)
+            avatar_font = ImageFont.truetype("cogs/packages/colors/gg_sans.ttf", 18)
+            d.text((74, 14), user.display_name, font=avatar_font, fill=name_color)
+        
+            content_font = ImageFont.truetype("cogs/packages/colors/gg_sans_light.ttf", 14)
+            text_color = (255, 255, 255) if v == (54, 57, 63) else (0, 0, 0)
+            d.text((74, 40), "Ceci est une représentation simulée\nde la couleur qu'aurait votre pseudo", font=content_font, fill=text_color)
+            images.append(bg)
+        
+        # On met les deux images une en dessous de l'autre
+        full = Image.new("RGBA", (320, 188), (54, 57, 63))
+        full.paste(images[0], (0, 0), images[0])
+        full.paste(images[1], (0, 94), images[1])
+        return full
             
     
     def get_color_info(self, color: str) -> Optional[dict]:
@@ -515,7 +545,10 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         avatar = await member.display_avatar.read()
         avatar = Image.open(BytesIO(avatar))
         colors = colorgram.extract(avatar, 5)
-        view = ChooseColorMenu(self, interaction, colors)
+        previews = []
+        for color in colors:
+            previews.append(await self.simulate_discord_display(member, color.rgb)) # type: ignore
+        view = ChooseColorMenu(self, interaction, colors, previews)
         await view.start()
         await view.wait()
         if not view.result:
