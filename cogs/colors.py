@@ -206,6 +206,10 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             return roles[0]
         return None
     
+    def get_all_user_color_roles(self, guild: discord.Guild) -> List[discord.Role]:
+        """Renvoie la liste de tous les rôles de couleur du serveur"""
+        return [role for role in self.get_color_roles(guild) if role.members]
+    
     async def create_color_role(self, guild: discord.Guild, request_user: discord.Member, color: str) -> discord.Role:
         """Crée un rôle de couleur (ou en recycle un si possible) et l'ajoute au serveur"""
         color = self.normalize_color(color) #type: ignore
@@ -483,16 +487,17 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         await interaction.response.defer()
-        role = self.get_user_color_role(member)
-        if not role:
+        roles = self.get_all_user_color_roles(member)
+        if not roles:
             return await interaction.followup.send("**Erreur ·** Vous n'avez pas de rôle de couleur.", ephemeral=True)
         
-        try:
-            await member.remove_roles(role)
-        except discord.Forbidden:
-            return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous retirer ce rôle.", ephemeral=True)
-        except discord.HTTPException:
-            return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors du retrait du rôle.", ephemeral=True)
+        for role in roles:
+            try:
+                await member.remove_roles(role)
+            except discord.Forbidden:
+                return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous retirer ce rôle.", ephemeral=True)
+            except discord.HTTPException:
+                return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors du retrait du rôle.", ephemeral=True)
         
         if len(role.members) == 0:
             try:
