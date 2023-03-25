@@ -53,9 +53,10 @@ class ChooseColorMenu(discord.ui.View):
         color = self.color_choice.rgb
         hexname = self._cog.rgb_to_hex(color)
         info = self._cog.get_color_info(hexname)
-        embed = discord.Embed(title=f'{hexname.upper()}', color=discord.Color.from_rgb(*color))
+        embed = discord.Embed(title=f'{hexname.upper()}', description="Couleurs extraites de l'avatar (du serveur) demandé", color=discord.Color.from_rgb(*color))
         embed.set_image(url='attachment://color.png')
-        embed.set_footer(text=f"{info['name']['value']}")
+        pagenb = f'{self.index + 1}/{len(self.colors)}'
+        embed.set_footer(text=f"{pagenb} · {info['name']['value']}")
         return embed
     
     async def start(self):
@@ -366,21 +367,21 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                         url = message.attachments[0].url
                         break
                 else:
-                    return await interaction.response.send_message("**Erreur · ** Aucune image valable n'a été trouvée dans l'historique récent de ce salon.", ephemeral=True)
+                    return await interaction.response.send_message("**Erreur ·** Aucune image valable n'a été trouvée dans l'historique récent de ce salon.", ephemeral=True)
                 
             with requests.get(url) as r:
                 if r.status_code != 200:
-                    return await interaction.response.send_message("**Erreur · ** L'image n'a pas pu être téléchargée. Vérifiez que l'URL est correcte et que l'image n'est pas trop volumineuse (max. 8 Mo).", ephemeral=True)
+                    return await interaction.response.send_message("**Erreur ·** L'image n'a pas pu être téléchargée. Vérifiez que l'URL est correcte et que l'image n'est pas trop volumineuse (max. 8 Mo).", ephemeral=True)
                 elif not r.headers.get('content-type').startswith('image'):
-                    return await interaction.response.send_message("**Erreur · ** L'URL donnée ne pointe pas vers une image.", ephemeral=True)
+                    return await interaction.response.send_message("**Erreur ·** L'URL donnée ne pointe pas vers une image.", ephemeral=True)
                 elif len(r.content) > 8388608:
-                    return await interaction.response.send_message("**Erreur · ** L'image est trop volumineuse (max. 8 Mo).", ephemeral=True)
+                    return await interaction.response.send_message("**Erreur ·** L'image est trop volumineuse (max. 8 Mo).", ephemeral=True)
                 img = BytesIO(r.content)
                 
             palette = self.draw_image_palette(img, colors)
         
         if not palette:
-            return await interaction.response.send_message("**Erreur · ** Une erreur s'est produite lors de la génération de la palette.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Une erreur s'est produite lors de la génération de la palette.", ephemeral=True)
         
         with BytesIO() as f:
             palette.save(f, 'PNG')
@@ -398,18 +399,18 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         member = interaction.user
         guild = interaction.guild
         if not isinstance(member, discord.Member) or not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         # Vérifier si la couleur est valide
         
         await interaction.response.defer()
         color = self.normalize_color(color) #type: ignore
         if not color:
-            return await interaction.followup.send("**Erreur · ** Le code hexadécimal de la couleur est invalide.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Le code hexadécimal de la couleur est invalide.", ephemeral=True)
         
         role = await self.create_color_role(guild, member, color)
         if not role:
-            return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de la création du rôle.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors de la création du rôle.", ephemeral=True)
 
         await self.organize_color_roles(guild)
 
@@ -419,16 +420,16 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                 try:
                     await member.remove_roles(self_color_role)
                 except discord.Forbidden:
-                    return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de vous retirer le rôle **{}**.".format(self_color_role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous retirer le rôle **{}**.".format(self_color_role.name), ephemeral=True)
                 except discord.HTTPException:
-                    return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors du retrait du rôle **{}**.".format(self_color_role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors du retrait du rôle **{}**.".format(self_color_role.name), ephemeral=True)
 
             try:
                 await member.add_roles(role)
             except discord.Forbidden:
-                return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de vous attribuer ce rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous attribuer ce rôle.", ephemeral=True)
             except discord.HTTPException:
-                return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de l'attribution du rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors de l'attribution du rôle.", ephemeral=True)
             
         warning = ""
         if not self.is_color_displayed(member):
@@ -449,27 +450,27 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         member = interaction.user
         guild = interaction.guild
         if not isinstance(member, discord.Member) or not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         await interaction.response.defer()
         role = self.get_user_color_role(member)
         if not role:
-            return await interaction.followup.send("**Erreur · ** Vous n'avez pas de rôle de couleur.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Vous n'avez pas de rôle de couleur.", ephemeral=True)
         
         try:
             await member.remove_roles(role)
         except discord.Forbidden:
-            return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de vous retirer ce rôle.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous retirer ce rôle.", ephemeral=True)
         except discord.HTTPException:
-            return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors du retrait du rôle.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors du retrait du rôle.", ephemeral=True)
         
         if len(role.members) == 0:
             try:
                 await role.delete()
             except discord.Forbidden:
-                return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de supprimer ce rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de supprimer ce rôle.", ephemeral=True)
             except discord.HTTPException:
-                return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de la suppression du rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors de la suppression du rôle.", ephemeral=True)
         
         await interaction.followup.send("**Succès · ** Vous n'avez plus le rôle **{}**.".format(role.name))
 
@@ -479,12 +480,12 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         """Liste les rôles de couleurs sur ce serveur"""
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         await interaction.response.defer()
         roles = self.get_color_roles(guild)
         if not roles:
-            return await interaction.followup.send("**Erreur · ** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
         
         rolelist = []
         for role in roles:
@@ -509,7 +510,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         request = interaction.user
         guild = interaction.guild
         if not isinstance(request, discord.Member) or not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         avatar = await member.display_avatar.read()
         avatar = Image.open(BytesIO(avatar))
@@ -518,12 +519,12 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         await view.start()
         await view.wait()
         if not view.result:
-            return await interaction.response.send_message("**Annulée · ** Aucune couleur n'a été choisie.", ephemeral=True, delete_after=10)
+            return await interaction.response.send_message("**Annulée ·** Aucune couleur n'a été choisie.", ephemeral=True, delete_after=10)
 
         color = self.rgb_to_hex(view.result.rgb)
         role = await self.create_color_role(guild, request, color)
         if not role:
-            return await interaction.response.send_message("**Erreur · ** Une erreur s'est produite lors de la création du rôle.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Une erreur s'est produite lors de la création du rôle.", ephemeral=True)
 
         await self.organize_color_roles(guild)
 
@@ -533,16 +534,16 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                 try:
                     await request.remove_roles(self_color_role)
                 except discord.Forbidden:
-                    return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de vous retirer le rôle **{}**.".format(self_color_role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous retirer le rôle **{}**.".format(self_color_role.name), ephemeral=True)
                 except discord.HTTPException:
-                    return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors du retrait du rôle **{}**.".format(self_color_role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors du retrait du rôle **{}**.".format(self_color_role.name), ephemeral=True)
 
             try:
                 await request.add_roles(role)
             except discord.Forbidden:
-                return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de vous attribuer ce rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de vous attribuer ce rôle.", ephemeral=True)
             except discord.HTTPException:
-                return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de l'attribution du rôle.", ephemeral=True)
+                return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors de l'attribution du rôle.", ephemeral=True)
             
         warning = ""
         if not self.is_color_displayed(request):
@@ -563,12 +564,12 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         """Efface tous les rôles qui ne sont pas attribués à un membre"""
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         await interaction.response.defer()
         roles = self.get_color_roles(guild)
         if not roles:
-            return await interaction.followup.send("**Erreur · ** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
+            return await interaction.followup.send("**Erreur ·** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
         
         deleted = 0
         for role in roles:
@@ -576,18 +577,18 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                 try:
                     await role.delete()
                 except discord.Forbidden:
-                    return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de supprimer le rôle **{}**.".format(role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Je n'ai pas la permission de supprimer le rôle **{}**.".format(role.name), ephemeral=True)
                 except discord.HTTPException:
-                    return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de la suppression du rôle **{}**.".format(role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur ·** Une erreur s'est produite lors de la suppression du rôle **{}**.".format(role.name), ephemeral=True)
                 deleted += 1
                 
         # Faire du rangement
         await self.organize_color_roles(guild)
         
         if deleted == 0:
-            return await interaction.followup.send("**Succès · ** Aucun rôle n'a été supprimé.", ephemeral=True)
+            return await interaction.followup.send("**Succès ·** Aucun rôle n'a été supprimé.", ephemeral=True)
         
-        await interaction.followup.send("**Succès · ** {} rôles ont été supprimés.".format(deleted))
+        await interaction.followup.send("**Succès ·** {} rôles ont été supprimés.".format(deleted))
         
     @app_commands.command(name="setbeacon")
     @app_commands.guild_only()
@@ -599,14 +600,14 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         """
         guild = interaction.guild
         if not isinstance(guild, discord.Guild):
-            return await interaction.response.send_message("**Erreur · ** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
+            return await interaction.response.send_message("**Erreur ·** Vous devez être membre d'un serveur pour utiliser cette commande.", ephemeral=True)
         
         if not role:
             self.set_beacon_role(guild, None)
-            return await interaction.response.send_message("**Succès · ** Le rôle de balise a été désactivé.", ephemeral=True)
+            return await interaction.response.send_message("**Succès ·** Le rôle de balise a été désactivé.", ephemeral=True)
         
         self.set_beacon_role(guild, role)
-        await interaction.response.send_message("**Succès · ** Le rôle **{}** sert désormais de balise.".format(role.name), ephemeral=True)
+        await interaction.response.send_message("**Succès ·** Le rôle **{}** sert désormais de balise.".format(role.name), ephemeral=True)
         
 async def setup(bot):
     await bot.add_cog(Colors(bot))
