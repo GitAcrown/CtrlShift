@@ -568,7 +568,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         await interaction.response.defer()
         roles = self.get_color_roles(guild)
         if not roles:
-            return await interaction.response.send_message("**Erreur · ** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
+            return await interaction.followup.send("**Erreur · ** Aucun rôle de couleur n'a été trouvé sur ce serveur.", ephemeral=True)
         
         deleted = 0
         for role in roles:
@@ -576,16 +576,16 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
                 try:
                     await role.delete()
                 except discord.Forbidden:
-                    return await interaction.response.send_message("**Erreur · ** Je n'ai pas la permission de supprimer le rôle **{}**.".format(role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur · ** Je n'ai pas la permission de supprimer le rôle **{}**.".format(role.name), ephemeral=True)
                 except discord.HTTPException:
-                    return await interaction.response.send_message("**Erreur · ** Une erreur s'est produite lors de la suppression du rôle **{}**.".format(role.name), ephemeral=True)
+                    return await interaction.followup.send("**Erreur · ** Une erreur s'est produite lors de la suppression du rôle **{}**.".format(role.name), ephemeral=True)
                 deleted += 1
                 
         # Faire du rangement
         await self.organize_color_roles(guild)
         
         if deleted == 0:
-            return await interaction.response.send_message("**Succès · ** Aucun rôle n'a été supprimé.", ephemeral=True)
+            return await interaction.followup.send("**Succès · ** Aucun rôle n'a été supprimé.", ephemeral=True)
         
         await interaction.followup.send("**Succès · ** {} rôles ont été supprimés.".format(deleted))
         
