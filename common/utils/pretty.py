@@ -1,5 +1,6 @@
 # Fonctions d'affichage transverses
 from typing import Union
+from datetime import datetime, timedelta
 
 def bar_chart(value: int, max_value: int, char_value: int = 1, use_half_bar: bool = True) -> str:
     """Crée une barre en ASCII représentant une progression ou une proportion
@@ -46,3 +47,25 @@ def codeblock(text: str, lang: str = "") -> str:
     :return: str
     """
     return f"```{lang}\n{text}\n```"
+
+def parse_time(delta: timedelta) -> str:
+    """Renvoie un texte représentant la durée relative donnée"""
+    seconds = delta.seconds + delta.days * 24 * 3600
+    units = {
+        'j': delta.days,
+        'h': seconds // 3600 % 24,
+        'm': seconds // 60 % 60,
+        's': seconds % 60
+    }
+    trsl = {
+        'j': ('jour', 'jours'),
+        'h': ('heure', 'heures'),
+        'm': ('minute', 'minutes'),
+        's': ('seconde', 'secondes')
+    }
+    txt = ""
+    for unit, value in units.items():
+        if value > 0:
+            txt += f"{value} {trsl[unit][0] if value == 1 else trsl[unit][1]} "
+    
+    return txt.strip()

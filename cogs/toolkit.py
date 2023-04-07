@@ -5,11 +5,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import Optional
+import re
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-
-from common.utils import pretty, fuzzy
-from common.dataio import get_sqlite_database
 
 logger = logging.getLogger('ctrlshift.Toolkit')
 
@@ -53,12 +50,13 @@ class Toolkit(commands.Cog):
     async def choose(self, interaction: discord.Interaction, items: str, weights: Optional[str] = '', elements: app_commands.Range[int, 1] = 1):
         """Choisi un élément aléatoire dans une liste (avec remise)
         
-        :param items: Liste d'éléments séparés par des virgules
-        :param weights: Liste de poids séparés par des virgules, dans l'ordre des items
-        :param elements: Nombre d'éléments à choisir"""
-        i = [item.strip() for item in items.split(',')]
+        :param items: Liste d'éléments séparés par ,;|
+        :param weights: Liste de poids séparés par ,;| dans l'ordre des items (optionnel)
+        :param elements: Nombre d'éléments à choisir (optionnel)"""
+        # Séparer les items avec , ou ; ou |
+        i = re.split(r',|;|\|', items)
         if weights:
-            w = [int(weight.strip()) for weight in weights.split(',')]
+            w = re.split(r',|;|\|', weights)
         else:
             w = None
         
