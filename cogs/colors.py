@@ -282,7 +282,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
             if not color:
                 raise commands.BadArgument('La couleur spécifiée est invalide.')
             color = tuple(int(color[i:i+2], 16) for i in (0, 2, 4)) #type: ignore
-        image = Image.new('RGB', (200, 200), color)
+        image = Image.new('RGB', (100, 100), color)
         d = ImageDraw.Draw(image)
         if with_text:
             if sum(color) < 382:
