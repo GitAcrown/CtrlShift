@@ -50,7 +50,7 @@ class ChooseColorMenu(discord.ui.View):
         hexname = self._cog.rgb_to_hex(color)
         info = self._cog.get_color_info(hexname)
         embed = discord.Embed(title=f'{hexname.upper()}', description="Couleurs extraites de l'avatar (du serveur) demandé", color=discord.Color.from_rgb(*color))
-        embed.set_thumbnail(url='attachment://color.png')
+        embed.set_image(url='attachment://color.png')
         pagenb = f'{self.index + 1}/{len(self.colors)}'
         embed.set_footer(text=f"{pagenb} · {info['name']['value']}")
         return embed
@@ -300,7 +300,7 @@ class Colors(commands.GroupCog, group_name='color', description='Gestion des rô
         embed = discord.Embed(description=text, color=discord.Color(int(color, 16)))
         if info:
             embed.set_footer(text=f"{info['name']['value']}")
-        embed.set_image(url="attachment://color.png")
+        embed.set_thumbnail(url="attachment://color.png")
         return embed
     
     async def simulate_discord_display(self, user: Union[discord.User, discord.Member], name_color: tuple) -> Image.Image:
