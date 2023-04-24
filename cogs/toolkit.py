@@ -57,7 +57,7 @@ class Toolkit(commands.Cog):
         i = re.split(r',|;|\|', items)
         if weights:
             w = re.split(r',|;|\|', weights)
-            w = tuple(int(x) for x in w)
+            w = tuple(float(x) for x in w)
         else:
             w = None
         
