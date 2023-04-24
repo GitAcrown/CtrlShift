@@ -23,8 +23,8 @@ class Toolkit(commands.Cog):
         faces = tuple(range(step, sides + 1, step))
         return [random.choice(faces) for _ in range(count)]
     
-    @app_commands.command(name='dice')
-    async def dice(self, interaction: discord.Interaction, sides: app_commands.Range[int, 1] = 6, count: app_commands.Range[int, 1, 50] = 1, step: app_commands.Range[int, 1] = 1):
+    @app_commands.command(name='roll')
+    async def roll(self, interaction: discord.Interaction, sides: app_commands.Range[int, 1] = 6, count: app_commands.Range[int, 1, 50] = 1, step: app_commands.Range[int, 1] = 1):
         """Simule un ou plusieurs dés
         
         :param sides: Nombre de faces du dé
@@ -50,13 +50,14 @@ class Toolkit(commands.Cog):
     async def choose(self, interaction: discord.Interaction, items: str, weights: Optional[str] = '', elements: app_commands.Range[int, 1] = 1):
         """Choisi un élément aléatoire dans une liste (avec remise)
         
-        :param items: Liste d'éléments séparés par ,;|
-        :param weights: Liste de poids séparés par ,;| dans l'ordre des items (optionnel)
+        :param items: Liste d'éléments séparés par , ou ; ou |
+        :param weights: Liste de poids séparés par , ou ; ou | dans l'ordre des items (optionnel)
         :param elements: Nombre d'éléments à choisir (optionnel)"""
         # Séparer les items avec , ou ; ou |
         i = re.split(r',|;|\|', items)
         if weights:
             w = re.split(r',|;|\|', weights)
+            w = tuple(int(x) for x in w)
         else:
             w = None
         
